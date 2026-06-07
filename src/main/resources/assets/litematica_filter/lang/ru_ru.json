@@ -1,0 +1,19 @@
+{
+  "key.litematica_filter.open_filter": "Открыть фильтр материалов",
+  "litematica_filter.screen.title": "⬡ Litematica Material Filter",
+  "litematica_filter.screen.search.narration": "Поиск материалов",
+  "litematica_filter.screen.search.placeholder": "Поиск: мангровое, oak, stone, редстоун...",
+  "litematica_filter.screen.button.apply": "▶ Применить к HUD",
+  "litematica_filter.screen.button.clear": "✕ Сбросить фильтр",
+  "litematica_filter.screen.button.close": "Закрыть",
+  "litematica_filter.screen.status.active": "§aФильтр активен: §f\"%1$s\"  §7(%2$s блоков)",
+  "litematica_filter.screen.status.inactive": "§7Фильтр не активен — HUD показывает все материалы",
+  "litematica_filter.screen.counter": "Показано: §f%1$s§7 / §f%2$s",
+  "litematica_filter.screen.hint.active": "§aInfo HUD покажет только отфильтрованные блоки",
+  "litematica_filter.screen.hint.inactive": "§7Введи запрос и нажми §f▶ Применить к HUD",
+  "litematica_filter.screen.empty.nodata": "§cНет данных. Загрузи схему и зайди в список материалов для загрузки.",
+  "litematica_filter.screen.empty.noresults": "§7Ничего не найдено по запросу \"§f%1$s§7\"",
+  "modmenu.nameTranslation.litematica_filter": "Litematica Material Filter",
+  "modmenu.summaryTranslation.litematica_filter": "Фильтрация материалов в информационной панеле по поисковому запросу",
+  "modmenu.descriptionTranslation.litematica_filter": "Позволяет фильтровать список материалов по запросу и выводить в Панель информации только нужные блоки — без ручного нажатия «Игнорировать» на каждый лишний материал."
+}
