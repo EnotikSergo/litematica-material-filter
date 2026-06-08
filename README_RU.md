@@ -7,6 +7,8 @@
 
 ---
 
+<img width="1920" height="1017" alt="image" src="https://github.com/user-attachments/assets/a9a345ab-d14d-439f-aad4-f0c11d3cf0ad" />
+
 ## Использование
 
 1. Загрузи схему в Litematica и выбери Список материалов, выйди из меню.
