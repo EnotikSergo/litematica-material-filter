@@ -6,6 +6,9 @@ Allows you to filter the material list by search query and display only the requ
 
 ---
 
+<img width="1920" height="1017" alt="image" src="https://github.com/user-attachments/assets/a9a345ab-d14d-439f-aad4-f0c11d3cf0ad" />
+
+
 ## Usage
 
 1. Load a schematic in Litematica, open the **Material List**, then close the menu.
