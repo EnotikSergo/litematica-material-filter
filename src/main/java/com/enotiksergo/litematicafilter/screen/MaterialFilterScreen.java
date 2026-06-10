@@ -5,14 +5,14 @@ import com.enotiksergo.litematicafilter.filter.MaterialFilterManager;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,7 +45,7 @@ public class MaterialFilterScreen extends Screen {
     private final Set<String> selectedItemIds = new HashSet<>();
 
     private final Screen parent;
-    private TextFieldWidget searchField;
+    private EditBox searchField;
     private int scrollOffset = 0;
     private int visibleEntries = 0;
     private int listWidth = 420;
@@ -56,7 +56,7 @@ public class MaterialFilterScreen extends Screen {
     private boolean isDraggingScrollbar = false;
 
     public MaterialFilterScreen(Screen parent) {
-        super(Text.translatable("litematicafilter.screen.title"));
+        super(Component.translatable("litematicafilter.screen.title"));
         this.parent = parent;
         this.selectedItemIds.addAll(MaterialFilterManager.getInstance().getActiveFilterIds());
     }
@@ -72,40 +72,40 @@ public class MaterialFilterScreen extends Screen {
 
         int searchW = listWidth - 115;
 
-        searchField = new TextFieldWidget(
-                this.textRenderer,
+        searchField = new EditBox(
+                this.font,
                 listX, SEARCH_Y,
                 searchW, SEARCH_H,
-                Text.translatable("litematicafilter.screen.search.narration")
+                Component.translatable("litematicafilter.screen.search.narration")
         );
-        searchField.setPlaceholder(Text.translatable("litematicafilter.screen.search.placeholder"));
+        searchField.setHint(Component.translatable("litematicafilter.screen.search.placeholder"));
         searchField.setMaxLength(64);
-        searchField.setChangedListener(this::onSearchChanged);
+        searchField.setResponder(this::onSearchChanged);
 
-        this.addDrawableChild(searchField);
+        this.addRenderableWidget(searchField);
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.translatable("litematicafilter.screen.button.apply"),
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("litematicafilter.screen.button.apply"),
                 btn -> applyFilter()
-        ).dimensions(listX + searchW + 5, SEARCH_Y, 110, BTN_H).build());
+        ).bounds(listX + searchW + 5, SEARCH_Y, 110, BTN_H).build());
 
         int bottomY = this.height - BOTTOM_BAR_H;
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.translatable("litematicafilter.screen.button.clear"),
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("litematicafilter.screen.button.clear"),
                 btn -> clearFilter()
-        ).dimensions(listX, bottomY, 110, BTN_H).build());
+        ).bounds(listX, bottomY, 110, BTN_H).build());
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.translatable("litematicafilter.screen.button.close"),
+        this.addRenderableWidget(Button.builder(
+                Component.translatable("litematicafilter.screen.button.close"),
                 btn -> closeScreen()
-        ).dimensions(listX + listWidth - 70, bottomY, 70, BTN_H).build());
+        ).bounds(listX + listWidth - 70, bottomY, 70, BTN_H).build());
 
         int listEndY = this.height - BOTTOM_BAR_H - 6;
         int listAreaH = listEndY - LIST_START_Y;
         this.visibleEntries = Math.max(1, listAreaH / ENTRY_H);
 
-        updateFilteredList(searchField.getText());
+        updateFilteredList(searchField.getValue());
     }
 
     private void loadMaterialsFromLitematica() {
@@ -146,8 +146,8 @@ public class MaterialFilterScreen extends Screen {
     private boolean matchesQuery(MaterialListEntry entry, String query) {
         try {
             ItemStack stack = entry.getStack();
-            String id = Registries.ITEM.getId(stack.getItem()).toString().toLowerCase(Locale.ROOT);
-            String name = stack.getName().getString().toLowerCase(Locale.ROOT);
+            String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase(Locale.ROOT);
+            String name = stack.getHoverName().getString().toLowerCase(Locale.ROOT);
             return id.contains(query) || name.contains(query);
         } catch (Exception e) {
             return false;
@@ -161,14 +161,14 @@ public class MaterialFilterScreen extends Screen {
             return;
         }
 
-        String searchText = searchField.getText().trim();
+        String searchText = searchField.getValue().trim();
 
         Set<String> matchingIds = new LinkedHashSet<>(selectedItemIds);
 
         if (!searchText.isEmpty()) {
             for (MaterialListEntry entry : filteredEntries) {
                 try {
-                    matchingIds.add(Registries.ITEM.getId(entry.getStack().getItem()).toString());
+                    matchingIds.add(BuiltInRegistries.ITEM.getKey(entry.getStack().getItem()).toString());
                 } catch (Exception ignored) {
                 }
             }
@@ -184,7 +184,7 @@ public class MaterialFilterScreen extends Screen {
         int ignoredCount = 0;
         for (MaterialListEntry entry : new ArrayList<>(matList.getMaterialsAll())) {
             try {
-                String id = Registries.ITEM.getId(entry.getStack().getItem()).toString();
+                String id = BuiltInRegistries.ITEM.getKey(entry.getStack().getItem()).toString();
                 if (!matchingIds.contains(id)) {
                     matList.ignoreEntry(entry);
                     ignoredCount++;
@@ -213,43 +213,41 @@ public class MaterialFilterScreen extends Screen {
 
         selectedItemIds.clear();
 
-        searchField.setText("");
+        searchField.setValue("");
         updateFilteredList("");
     }
 
     private void closeScreen() {
-        if (this.client != null) this.client.setScreen(parent);
+        if (this.minecraft != null) this.minecraft.setScreen(parent);
     }
 
-    @Override
-    public void renderBackground(DrawContext ctx, int mx, int my, float delta) {
+    public void renderBackground(GuiGraphicsExtractor ctx, int mx, int my, float delta) {
         ctx.fill(0, 0, this.width, this.height, 0xB2000000);
     }
 
-    @Override
-    public void render(DrawContext ctx, int mx, int my, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mx, int my, float delta) {
         renderBackground(ctx, mx, my, delta);
 
         ctx.fill(listX - 6, 2, listX + listWidth + 6, this.height - 2, COL_PANEL_BG);
 
-        ctx.drawCenteredTextWithShadow(textRenderer,
-                Text.translatable("litematicafilter.screen.title").formatted(net.minecraft.util.Formatting.BOLD),
+        ctx.centeredText(font,
+                Component.translatable("litematicafilter.screen.title").withStyle(net.minecraft.ChatFormatting.BOLD),
                 this.width / 2, TITLE_Y, COL_TEXT_MAIN);
 
         MaterialFilterManager mgr = MaterialFilterManager.getInstance();
         if (mgr.isFilterActive()) {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("litematicafilter.screen.status.active",
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.status.active",
                             mgr.getActiveFilterIds().size()),
                     this.width / 2, STATUS_Y, COL_TEXT_FILTER);
         } else {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("litematicafilter.screen.status.inactive"),
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.status.inactive"),
                     this.width / 2, STATUS_Y, COL_TEXT_DIM);
         }
 
-        ctx.drawTextWithShadow(textRenderer,
-                Text.translatable("litematicafilter.screen.counter",
+        ctx.text(font,
+                Component.translatable("litematicafilter.screen.counter",
                         filteredEntries.size(), allEntries.size()),
                 listX, LIST_START_Y - 6, COL_TEXT_DIM);
 
@@ -262,26 +260,26 @@ public class MaterialFilterScreen extends Screen {
             renderScrollbar(ctx, listX + listWidth + 3, LIST_START_Y, listEndY);
         }
 
-        ctx.drawCenteredTextWithShadow(textRenderer,
-                Text.translatable(mgr.isFilterActive()
+        ctx.centeredText(font,
+                Component.translatable(mgr.isFilterActive()
                         ? "litematicafilter.screen.hint.active"
                         : "litematicafilter.screen.hint.inactive"),
                 this.width / 2, this.height - BOTTOM_BAR_H - 13, COL_TEXT_MAIN);
 
-        super.render(ctx, mx, my, delta);
+        super.extractRenderState(ctx, mx, my, delta);
 
         if (allEntries.isEmpty()) {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("litematicafilter.screen.empty.nodata"),
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.nodata"),
                     this.width / 2, this.height / 2, 0xFF5555FF);
         } else if (filteredEntries.isEmpty()) {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("litematicafilter.screen.empty.noresults", searchField.getText()),
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.noresults", searchField.getValue()),
                     this.width / 2, this.height / 2, COL_TEXT_DIM);
         }
     }
 
-    private void renderList(DrawContext ctx, int mx, int my, int endY, MaterialFilterManager mgr) {
+    private void renderList(GuiGraphicsExtractor ctx, int mx, int my, int endY, MaterialFilterManager mgr) {
         for (int i = 0; i < visibleEntries; i++) {
             int idx = i + scrollOffset;
             if (idx >= filteredEntries.size()) break;
@@ -294,14 +292,14 @@ public class MaterialFilterScreen extends Screen {
         }
     }
 
-    private void renderEntry(DrawContext ctx, MaterialListEntry entry, int x, int y, int mx, int my, MaterialFilterManager mgr) {
+    private void renderEntry(GuiGraphicsExtractor ctx, MaterialListEntry entry, int x, int y, int mx, int my, MaterialFilterManager mgr) {
         ItemStack stack;
         String itemId;
         String displayName;
         try {
             stack = entry.getStack();
-            itemId = Registries.ITEM.getId(stack.getItem()).toString();
-            displayName = stack.getName().getString();
+            itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            displayName = stack.getHoverName().getString();
         } catch (Exception e) {
             return;
         }
@@ -314,13 +312,13 @@ public class MaterialFilterScreen extends Screen {
 
         if (inFilter) ctx.fill(x, y, x + 3, y + ENTRY_H - 1, COL_ACTIVE_MARK);
 
-        ctx.drawItem(stack, x + 3, y + 3);
+        ctx.item(stack, x + 3, y + 3);
 
         int maxNameW = listWidth - 80;
-        String nameStr = textRenderer.getWidth(displayName) > maxNameW
-                ? textRenderer.trimToWidth(displayName, maxNameW - 6) + "…"
+        String nameStr = font.width(displayName) > maxNameW
+                ? font.plainSubstrByWidth(displayName, maxNameW - 6) + "…"
                 : displayName;
-        ctx.drawTextWithShadow(textRenderer, Text.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
+        ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
 
         try {
             long total = entry.getCountTotal();
@@ -328,14 +326,14 @@ public class MaterialFilterScreen extends Screen {
             if (total > 0) {
                 String cnt = avail + "/" + total;
                 int cColor = (avail >= total) ? COL_COUNT_OK : COL_COUNT_MISS;
-                ctx.drawTextWithShadow(textRenderer, Text.literal(cnt),
-                        x + listWidth - textRenderer.getWidth(cnt) - 2, y + 7, cColor);
+                ctx.text(font, Component.literal(cnt),
+                        x + listWidth - font.width(cnt) - 2, y + 7, cColor);
             }
         } catch (Exception ignored) {
         }
     }
 
-    private void renderScrollbar(DrawContext ctx, int x, int startY, int endY) {
+    private void renderScrollbar(GuiGraphicsExtractor ctx, int x, int startY, int endY) {
         int trackH = endY - startY;
         int thumbH = Math.max(16, trackH * visibleEntries / filteredEntries.size());
         int maxScr = filteredEntries.size() - visibleEntries;
@@ -355,12 +353,12 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         double mouseX = click.x();
         double mouseY = click.y();
 
@@ -393,7 +391,7 @@ public class MaterialFilterScreen extends Screen {
                     MaterialListEntry entry = filteredEntries.get(entryIndex);
 
                     try {
-                        String itemId = Registries.ITEM.getId(entry.getStack().getItem()).toString();
+                        String itemId = BuiltInRegistries.ITEM.getKey(entry.getStack().getItem()).toString();
 
                         if (selectedItemIds.contains(itemId)) {
                             selectedItemIds.remove(itemId);
@@ -412,7 +410,7 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+    public boolean mouseDragged(MouseButtonEvent click, double offsetX, double offsetY) {
         boolean handled = super.mouseDragged(click, offsetX, offsetY);
 
         if (!isDraggingScrollbar) {
@@ -431,7 +429,7 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         isDraggingScrollbar = false;
         return super.mouseReleased(click);
     }

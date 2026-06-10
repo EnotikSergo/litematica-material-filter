@@ -5,8 +5,8 @@ import fi.dy.masa.litematica.gui.GuiMaterialList;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
 import fi.dy.masa.malilib.gui.button.IButtonActionListener;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,11 +23,11 @@ public abstract class GuiMaterialListMixin extends GuiBase {
         int x = this.width - 210;
         int y = this.height - 36;
 
-        String buttonLabel = Text.translatable("litematicafilter.screen.button.open").getString();
+        String buttonLabel = Component.translatable("litematicafilter.screen.button.open").getString();
         ButtonGeneric filterButton = new ButtonGeneric(x, y, btnWidth, btnHeight, buttonLabel);
 
         IButtonActionListener actionListener = (btn, mouseButton) -> {
-            MinecraftClient.getInstance().setScreen(new MaterialFilterScreen(this));
+            Minecraft.getInstance().setScreen(new MaterialFilterScreen(this));
         };
 
         this.addButton(filterButton, actionListener);
