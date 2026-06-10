@@ -10,7 +10,7 @@ import java.util.Set;
 public class MaterialFilterManager {
 
     private static final MaterialFilterManager INSTANCE = new MaterialFilterManager();
-    private static final Logger LOGGER = LoggerFactory.getLogger("litematica_filter");
+    private static final Logger LOGGER = LoggerFactory.getLogger("litematicafilter");
 
     private boolean filterActive = false;
     private String filterSearchText = "";
@@ -41,7 +41,7 @@ public class MaterialFilterManager {
         this.activeFilterIds.clear();
         this.activeFilterIds.addAll(shownItemIds);
         this.filterActive = !shownItemIds.isEmpty();
-        LOGGER.info("[LitematicaFilter] Filter set: '{}' — {} items visible", searchText, shownItemIds.size());
+        LOGGER.info("[LitematicaFilter] Filter set: {} items visible", shownItemIds.size());
     }
 
     public void clearFilter() {

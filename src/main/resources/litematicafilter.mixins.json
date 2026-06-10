@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.enotiksergo.litematicafilter.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "GuiMaterialListMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

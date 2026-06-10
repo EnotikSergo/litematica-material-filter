@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "litematica_filter",
+  "id": "litematicafilter",
   "version": "${version}",
   "name": "Litematica Material Filter",
   "description": "Litematica addon: filtering materials in the Info HUD by search query",
@@ -12,16 +12,16 @@
     "sources": "https://github.com/EnotikSergo/litematica-material-filter"
   },
   "license": "MIT",
-  "icon": "assets/litematica_filter/icon.png",
+  "icon": "assets/litematicafilter/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [
       "com.enotiksergo.litematicafilter.LitematicaFilterMod"
-    ],
-    "client": [
-      "com.enotiksergo.litematicafilter.LitematicaFilterClient"
     ]
   },
+  "mixins": [
+    "litematicafilter.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.15.0",
     "fabric-api": "*",

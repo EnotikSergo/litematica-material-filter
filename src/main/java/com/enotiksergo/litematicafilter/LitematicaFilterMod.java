@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 
 public class LitematicaFilterMod implements ModInitializer {
 
-    public static final String MOD_ID = "litematica_filter";
+    public static final String MOD_ID = "litematicafilter";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     @Override
