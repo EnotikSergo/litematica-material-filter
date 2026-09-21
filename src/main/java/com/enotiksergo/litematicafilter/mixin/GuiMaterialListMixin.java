@@ -27,7 +27,7 @@ public abstract class GuiMaterialListMixin extends GuiBase {
         ButtonGeneric filterButton = new ButtonGeneric(x, y, btnWidth, btnHeight, buttonLabel);
 
         IButtonActionListener actionListener = (btn, mouseButton) -> {
-            Minecraft.getInstance().setScreen(new MaterialFilterScreen(this));
+            Minecraft.getInstance().setScreenAndShow(new MaterialFilterScreen(this));
         };
 
         this.addButton(filterButton, actionListener);

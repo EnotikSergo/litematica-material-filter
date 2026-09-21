@@ -218,7 +218,7 @@ public class MaterialFilterScreen extends Screen {
     }
 
     private void closeScreen() {
-        if (this.minecraft != null) this.minecraft.setScreen(parent);
+        if (this.minecraft != null) this.minecraft.setScreenAndShow(parent);
     }
 
     public void renderBackground(GuiGraphicsExtractor ctx, int mx, int my, float delta) {
