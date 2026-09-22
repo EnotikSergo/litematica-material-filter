@@ -4,7 +4,12 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [],
   "client": [
-    "GuiMaterialListMixin"
+    "GuiMaterialListMixin",
+    "ChunkCacheSchematicMixin",
+    "ChunkRendererSchematicVboMixin",
+    "SchematicOverlayMixin",
+    "SchematicWorldMixin",
+    "WorldRendererSchematicMixin"
   ],
   "injectors": {
     "defaultRequire": 0

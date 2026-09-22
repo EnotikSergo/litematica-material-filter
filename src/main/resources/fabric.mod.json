@@ -17,6 +17,9 @@
   "entrypoints": {
     "main": [
       "com.enotiksergo.litematicafilter.LitematicaFilterMod"
+    ],
+    "client": [
+      "com.enotiksergo.litematicafilter.client.LitematicaFilterClient"
     ]
   },
   "mixins": [
