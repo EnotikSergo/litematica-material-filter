@@ -10,15 +10,18 @@ public class MatRow {
     public final long available;
     public final long missing;
     public final boolean isRoot;
+    public final boolean hasRecipe;
+    public final boolean isExpanded;
 
-    public MatRow(ItemStack stack, String itemId, String displayName,
-                  long total, long available, boolean isRoot) {
-        this.stack = stack;
-        this.itemId = itemId;
-        this.displayName = displayName;
-        this.total = total;
+    public MatRow(TreeNode node, long available, boolean isExpanded) {
+        this.stack = node.stack;
+        this.itemId = node.itemId;
+        this.displayName = node.displayName;
+        this.total = node.total;
         this.available = available;
         this.missing = Math.max(0, total - available);
-        this.isRoot = isRoot;
+        this.isRoot = node.isRoot;
+        this.hasRecipe = node.hasRecipe;
+        this.isExpanded = isExpanded;
     }
 }

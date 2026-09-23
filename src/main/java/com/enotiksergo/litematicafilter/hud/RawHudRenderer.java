@@ -3,24 +3,25 @@ package com.enotiksergo.litematicafilter.hud;
 import com.enotiksergo.litematicafilter.config.FilterConfig;
 import com.enotiksergo.litematicafilter.materials.CraftTreeAdapter;
 import com.enotiksergo.litematicafilter.materials.MatRow;
+import com.enotiksergo.litematicafilter.materials.TreeNode;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class RawHudRenderer {
     private static List<MatRow> cachedRows = null;
     private static long lastRebuildTime = 0;
 
     public static void render(GuiGraphicsExtractor ctx, DeltaTracker tickDelta) {
-        if (!FilterConfig.getInstance().isShowRawHud()) {
-            return;
-        }
-
+        if (!FilterConfig.getInstance().isShowRawHud()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
@@ -31,13 +32,9 @@ public class RawHudRenderer {
 
         if (cachedRows == null || cachedRows.isEmpty()) return;
 
-        int x = 4;
-        int y = 4;
-        int lineHeight = 12;
-        int padding = 2;
-        int iconSize = 16;
-        int nameMaxWidth = 100;
-        int totalWidth = padding + iconSize + 4 + nameMaxWidth + 4 + 60 + padding;
+        int x = 4, y = 4, lineHeight = 12, padding = 2, iconSize = 16;
+        int nameMaxWidth = 120, countWidth = 100;
+        int totalWidth = padding + iconSize + 4 + nameMaxWidth + 4 + countWidth + padding;
         int totalHeight = cachedRows.size() * lineHeight + padding * 2;
 
         ctx.fill(x, y, x + totalWidth, y + totalHeight, 0x80000000);
@@ -53,38 +50,60 @@ public class RawHudRenderer {
             ctx.item(row.stack, x + padding, currentY - 2);
 
             String name = row.displayName;
+            if (row.hasRecipe) {
+                name = (row.isExpanded ? "§a[-] §r" : "§e[+] §r") + name;
+            } else if (row.isRoot) {
+                name = "§6" + name;
+            }
+
             if (mc.font.width(name) > nameMaxWidth) {
                 name = mc.font.plainSubstrByWidth(name, nameMaxWidth - 6) + "...";
             }
-            int nameColor = row.isRoot ? 0xFFE0B040 : 0xFFFFFFFF;
+            ctx.text(mc.font, Component.literal(name), x + padding + iconSize + 4, currentY, 0xFFFFFFFF);
 
-            ctx.text(mc.font, Component.literal(name), x + padding + iconSize + 4, currentY, nameColor);
-
-            String countStr;
-            int countColor;
-            if (row.missing > 0) {
-                countStr = row.missing + " / " + row.total;
-                countColor = 0xFFFF5555;
-            } else {
-                countStr = "0 / " + row.total;
-                countColor = 0xFF55FF55;
-            }
+            String countStr = CraftTreeAdapter.formatCountForHud(row.total);
+            int countColor = row.missing > 0 ? 0xFFFF5555 : 0xFF55FF55;
             int countX = x + totalWidth - padding - mc.font.width(countStr);
             ctx.text(mc.font, Component.literal(countStr), countX, currentY, countColor);
         }
     }
 
     private static void rebuildRows() {
-        MaterialListBase matList = DataManager.getMaterialList();
-        if (matList == null) {
+        FilterConfig config = FilterConfig.getInstance();
+        MaterialListBase matList = getOrInitMaterialList();
+
+        if (matList == null || matList.getMaterialsAll().isEmpty()) {
             cachedRows = List.of();
             return;
         }
+
         try {
-            cachedRows = CraftTreeAdapter.buildFlatList(matList, FilterConfig.getInstance().getPanelTargets());
+            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getPanelTargets());
+            Set<String> priorityIds = new HashSet<>();
+            priorityIds.addAll(config.getRenderTargets());
+            priorityIds.addAll(config.getPanelTargets());
+
+            cachedRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
         } catch (Exception e) {
             cachedRows = List.of();
         }
+    }
+
+    private static MaterialListBase getOrInitMaterialList() {
+        MaterialListBase matList = DataManager.getMaterialList();
+        if (matList == null || matList.getMaterialsAll().isEmpty()) {
+            try {
+                SchematicPlacement placement = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
+                if (placement != null) {
+                    matList = placement.getMaterialList();
+                    DataManager.setMaterialList(matList);
+                    if (matList.getMaterialsAll().isEmpty()) {
+                        matList.reCreateMaterialList();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return matList;
     }
 
     public static void invalidateCache() {

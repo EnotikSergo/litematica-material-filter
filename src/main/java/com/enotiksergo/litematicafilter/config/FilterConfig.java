@@ -1,5 +1,6 @@
 package com.enotiksergo.litematicafilter.config;
 
+import com.enotiksergo.litematicafilter.hud.RawHudRenderer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
@@ -25,6 +26,8 @@ public class FilterConfig {
     private boolean showEntities = true;
     private boolean showRawHud = false;
 
+    private Set<String> expandedItems = new HashSet<>();
+
     public static FilterConfig getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new FilterConfig();
@@ -40,28 +43,40 @@ public class FilterConfig {
     public FilterMode getMode() { return mode; }
     public void setMode(FilterMode mode) { this.mode = mode; save(); }
 
+    public boolean isShowEntities() { return showEntities; }
+    public void toggleShowEntities() { setShowEntities(!this.showEntities); }
+    public void setShowEntities(boolean v) { this.showEntities = v; save(); }
+
+    public boolean isShowRawHud() { return showRawHud; }
+    public void toggleShowRawHud() { setShowRawHud(!this.showRawHud); }
+    public void setShowRawHud(boolean v) { this.showRawHud = v; save(); }
+
     public Set<String> getRenderTargets() { return renderTargets; }
     public void setRenderTargets(Set<String> targets) {
         this.renderTargets.clear();
         for (String t : targets) this.renderTargets.add(t.toLowerCase().trim());
-        save();
+        save(); RawHudRenderer.invalidateCache();
     }
-    public void clearRenderTargets() { this.renderTargets.clear(); save(); }
+    public void clearRenderTargets() { this.renderTargets.clear(); save(); RawHudRenderer.invalidateCache(); }
 
     public Set<String> getPanelTargets() { return panelTargets; }
     public void setPanelTargets(Set<String> targets) {
         this.panelTargets.clear();
         for (String t : targets) this.panelTargets.add(t.toLowerCase().trim());
-        save();
+        save(); RawHudRenderer.invalidateCache();
     }
-    public void clearPanelTargets() { this.panelTargets.clear(); save(); }
+    public void clearPanelTargets() { this.panelTargets.clear(); save(); RawHudRenderer.invalidateCache(); }
 
-    public boolean isShowEntities() { return showEntities; }
-    public void setShowEntities(boolean showEntities) { this.showEntities = showEntities; save(); }
-    public void toggleShowEntities() { setShowEntities(!this.showEntities); }
-    public boolean isShowRawHud() { return showRawHud; }
-    public void setShowRawHud(boolean showRawHud) { this.showRawHud = showRawHud; save(); }
-    public void toggleShowRawHud() { setShowRawHud(!this.showRawHud); }
+    public Set<String> getExpandedItems() { return expandedItems; }
+    public boolean isExpanded(String itemId) { return expandedItems.contains(itemId.toLowerCase().trim()); }
+    public void toggleExpanded(String itemId) {
+        String id = itemId.toLowerCase().trim();
+        if (expandedItems.contains(id)) expandedItems.remove(id);
+        else expandedItems.add(id);
+        save();
+        RawHudRenderer.invalidateCache();
+    }
+    public void clearExpanded() { this.expandedItems.clear(); save(); RawHudRenderer.invalidateCache(); }
 
     public boolean shouldShow(String blockId) {
         if (!enabled) return false;
@@ -87,18 +102,14 @@ public class FilterConfig {
                 this.panelTargets = loaded.panelTargets != null ? loaded.panelTargets : new HashSet<>();
                 this.showEntities = loaded.showEntities;
                 this.showRawHud = loaded.showRawHud;
+                this.expandedItems = loaded.expandedItems != null ? loaded.expandedItems : new HashSet<>();
             }
-        } catch (IOException e) {
-            LOGGER.error("Failed to load config", e);
-        }
+        } catch (IOException e) { LOGGER.error("Failed to load config", e); }
     }
 
     public void save() {
         File file = CONFIG_PATH.toFile();
-        try (FileWriter writer = new FileWriter(file)) {
-            GSON.toJson(this, writer);
-        } catch (IOException e) {
-            LOGGER.error("Failed to save config", e);
-        }
+        try (FileWriter writer = new FileWriter(file)) { GSON.toJson(this, writer); }
+        catch (IOException e) { LOGGER.error("Failed to save config", e); }
     }
 }
