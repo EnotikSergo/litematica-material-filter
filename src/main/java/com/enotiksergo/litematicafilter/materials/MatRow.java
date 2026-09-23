@@ -12,8 +12,9 @@ public class MatRow {
     public final boolean isRoot;
     public final boolean hasRecipe;
     public final boolean isExpanded;
+    public final boolean isExpandedChild;
 
-    public MatRow(TreeNode node, long available, boolean isExpanded) {
+    public MatRow(TreeNode node, long available, boolean isExpanded, boolean isExpandedChild) {
         this.stack = node.stack;
         this.itemId = node.itemId;
         this.displayName = node.displayName;
@@ -23,5 +24,6 @@ public class MatRow {
         this.isRoot = node.isRoot;
         this.hasRecipe = node.hasRecipe;
         this.isExpanded = isExpanded;
+        this.isExpandedChild = isExpandedChild;
     }
 }

@@ -5,7 +5,9 @@ import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.materials.json.MaterialListJsonBase;
 import fi.dy.masa.litematica.materials.json.MaterialListJsonEntry;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -87,16 +89,23 @@ public class CraftTreeAdapter {
 
     public static List<MatRow> flattenAndSort(TreeNode root, Set<String> expanded, Set<String> priorityIds) {
         Map<String, TreeNode> aggregated = new LinkedHashMap<>();
+        Map<String, Boolean> expandedChildFlags = new HashMap<>();
 
         for (TreeNode child : root.children) {
-            collectAndAggregateLeaves(child, expanded, aggregated);
+            collectAndAggregateLeaves(child, expanded, aggregated, expandedChildFlags, false);
         }
+
+        Map<String, Integer> inventoryCounts = getInventoryCounts();
 
         List<MatRow> rows = new ArrayList<>();
         for (TreeNode node : aggregated.values()) {
             String idLower = node.itemId.toLowerCase().trim();
             boolean isExpanded = expanded.contains(idLower);
-            rows.add(new MatRow(node, 0, isExpanded));
+            boolean isExpandedChild = expandedChildFlags.getOrDefault(idLower, false);
+
+            long available = inventoryCounts.getOrDefault(idLower, 0);
+
+            rows.add(new MatRow(node, available, isExpanded, isExpandedChild));
         }
 
         rows.sort((a, b) -> {
@@ -109,7 +118,7 @@ public class CraftTreeAdapter {
         return rows;
     }
 
-    private static void collectAndAggregateLeaves(TreeNode node, Set<String> expanded, Map<String, TreeNode> out) {
+    private static void collectAndAggregateLeaves(TreeNode node, Set<String> expanded, Map<String, TreeNode> out, Map<String, Boolean> expandedChildFlags, boolean parentExpanded) {
         if (node == null) return;
 
         String idLower = node.itemId.toLowerCase().trim();
@@ -117,12 +126,13 @@ public class CraftTreeAdapter {
 
         if (node.hasRecipe && isExpanded && !node.children.isEmpty()) {
             for (TreeNode child : node.children) {
-                collectAndAggregateLeaves(child, expanded, out);
+                collectAndAggregateLeaves(child, expanded, out, expandedChildFlags, true);
             }
         } else {
+            boolean isExpandedChild = parentExpanded;
+
             if (out.containsKey(node.itemId)) {
                 TreeNode existing = out.get(node.itemId);
-
                 TreeNode merged = new TreeNode(
                         existing.stack,
                         existing.itemId,
@@ -132,10 +142,30 @@ public class CraftTreeAdapter {
                         existing.hasRecipe || node.hasRecipe
                 );
                 out.put(node.itemId, merged);
+                expandedChildFlags.put(node.itemId, expandedChildFlags.getOrDefault(node.itemId, false) || isExpandedChild);
             } else {
                 out.put(node.itemId, node);
+                expandedChildFlags.put(node.itemId, isExpandedChild);
             }
         }
+    }
+
+    private static Map<String, Integer> getInventoryCounts() {
+        Map<String, Integer> counts = new HashMap<>();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return counts;
+
+        Inventory inv = mc.player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = getItemId(stack).toLowerCase().trim();
+                if (!id.isEmpty()) {
+                    counts.merge(id, stack.getCount(), Integer::sum);
+                }
+            }
+        }
+        return counts;
     }
 
     public static String getItemId(ItemStack stack) {

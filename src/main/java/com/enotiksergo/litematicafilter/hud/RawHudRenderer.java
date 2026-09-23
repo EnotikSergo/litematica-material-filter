@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,8 @@ import java.util.Set;
 public class RawHudRenderer {
     private static List<MatRow> cachedRows = null;
     private static long lastRebuildTime = 0;
+
+    private static final Set<String> hiddenItems = new HashSet<>();
 
     public static void render(GuiGraphicsExtractor ctx, DeltaTracker tickDelta) {
         if (!FilterConfig.getInstance().isShowRawHud()) return;
@@ -61,8 +64,8 @@ public class RawHudRenderer {
             }
             ctx.text(mc.font, Component.literal(name), x + padding + iconSize + 4, currentY, 0xFFFFFFFF);
 
-            String countStr = CraftTreeAdapter.formatCountForHud(row.total);
-            int countColor = row.missing > 0 ? 0xFFFF5555 : 0xFF55FF55;
+            String countStr = CraftTreeAdapter.formatCountForHud(row.missing);
+            int countColor = 0xFFFF5555;
             int countX = x + totalWidth - padding - mc.font.width(countStr);
             ctx.text(mc.font, Component.literal(countStr), countX, currentY, countColor);
         }
@@ -83,7 +86,24 @@ public class RawHudRenderer {
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getPanelTargets());
 
-            cachedRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
+            List<MatRow> allRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
+
+            List<MatRow> visibleRows = new ArrayList<>();
+            for (MatRow row : allRows) {
+                String idLower = row.itemId.toLowerCase().trim();
+
+                if (row.missing <= 0 && !row.isExpandedChild) {
+                    hiddenItems.add(idLower);
+                    continue;
+                }
+
+                if (hiddenItems.contains(idLower) && !row.isExpandedChild) {
+                    continue;
+                }
+
+                visibleRows.add(row);
+            }
+            cachedRows = visibleRows;
         } catch (Exception e) {
             cachedRows = List.of();
         }
@@ -109,5 +129,20 @@ public class RawHudRenderer {
     public static void invalidateCache() {
         cachedRows = null;
         lastRebuildTime = 0;
+    }
+
+    public static void markAsCollected(String itemId) {
+        if (itemId != null && !itemId.isEmpty()) {
+            hiddenItems.add(itemId.toLowerCase().trim());
+        }
+    }
+
+    public static boolean isHidden(String itemId) {
+        return itemId != null && hiddenItems.contains(itemId.toLowerCase().trim());
+    }
+
+    public static void clearHiddenItems() {
+        hiddenItems.clear();
+        invalidateCache();
     }
 }

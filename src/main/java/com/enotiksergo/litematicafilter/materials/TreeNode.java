@@ -10,7 +10,7 @@ public class TreeNode {
     public final String displayName;
     public final long total;
     public final boolean isRoot;
-    public final boolean hasRecipe; // Есть ли рецепт для раскрытия
+    public final boolean hasRecipe;
     public final List<TreeNode> children;
 
     public TreeNode(ItemStack stack, String itemId, String displayName, long total, boolean isRoot, boolean hasRecipe) {

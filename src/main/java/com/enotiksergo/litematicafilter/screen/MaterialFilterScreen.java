@@ -118,7 +118,6 @@ public class MaterialFilterScreen extends Screen {
         if (config.isShowRawHud()) rebuildTreeAndRows();
     }
 
-    // ИСПРАВЛЕНИЕ: Асинхронный подсчет Litematica
     private void loadMaterialsFromLitematica() {
         allEntries.clear();
         MaterialListBase matList = DataManager.getMaterialList();
@@ -148,15 +147,48 @@ public class MaterialFilterScreen extends Screen {
     }
 
     private void rebuildTreeAndRows() {
-        MaterialListBase matList = DataManager.getMaterialList();
+        MaterialListBase matList = getOrInitMaterialList();
         if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); return; }
         try {
             TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getPanelTargets());
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getPanelTargets());
-            infoHudRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
+
+            List<MatRow> allRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
+
+            List<MatRow> visibleRows = new ArrayList<>();
+            for (MatRow row : allRows) {
+                String idLower = row.itemId.toLowerCase().trim();
+
+                if (row.missing <= 0 && !row.isExpandedChild) {
+                    RawHudRenderer.markAsCollected(idLower);
+                    continue;
+                }
+                if (RawHudRenderer.isHidden(idLower) && !row.isExpandedChild) {
+                    continue;
+                }
+                visibleRows.add(row);
+            }
+            infoHudRows = visibleRows;
         } catch (Exception e) { infoHudRows.clear(); }
+    }
+
+    private MaterialListBase getOrInitMaterialList() {
+        MaterialListBase matList = DataManager.getMaterialList();
+        if (matList == null || matList.getMaterialsAll().isEmpty()) {
+            try {
+                SchematicPlacement placement = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
+                if (placement != null) {
+                    matList = placement.getMaterialList();
+                    DataManager.setMaterialList(matList);
+                    if (matList.getMaterialsAll().isEmpty()) {
+                        matList.reCreateMaterialList();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return matList;
     }
 
     private String getBlockId(ItemStack stack) { return CraftTreeAdapter.getItemId(stack); }
@@ -212,6 +244,9 @@ public class MaterialFilterScreen extends Screen {
         MaterialFilterManager.getInstance().clearFilter();
         selectedRenderIds.clear(); selectedPanelIds.clear();
         searchField.setValue(""); updateFilteredList("");
+
+        RawHudRenderer.clearHiddenItems();
+
         if (config.isShowRawHud()) rebuildTreeAndRows();
         SchematicRenderRefresher.refreshSchematicRendering();
         RawHudRenderer.invalidateCache();
@@ -314,7 +349,6 @@ public class MaterialFilterScreen extends Screen {
         String nameStr = font.width(label) > listWidth - 100 ? font.plainSubstrByWidth(label, listWidth - 106) + "…" : label;
         ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
 
-        // ИСПРАВЛЕНИЕ: Формат GUI: available / total
         String cnt = row.available + " / " + row.total;
         ctx.text(font, Component.literal(cnt), x + listWidth - font.width(cnt) - 2, y + 7, (row.available >= row.total) ? COL_COUNT_OK : COL_COUNT_MISS);
     }
