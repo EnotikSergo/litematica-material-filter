@@ -20,7 +20,7 @@ public class ChunkRendererSchematicVboMixin {
     private void onRenderOverlay(OverlayType overlayType, BlockPos pos, BlockState schematicState, boolean missing, ChunkRenderDataSchematic chunkRenderData, ChunkMeshDataSchematic chunkMeshData, ChunkRenderDispatcherBuffers buffers, CallbackInfo ci) {
         if (schematicState != null) {
             String blockId = BuiltInRegistries.BLOCK.getKey(schematicState.getBlock()).toString();
-            if (!FilterConfig.getInstance().shouldShow(blockId)) {
+            if (FilterConfig.getInstance().shouldShow(blockId)) {
                 ci.cancel();
             }
         }

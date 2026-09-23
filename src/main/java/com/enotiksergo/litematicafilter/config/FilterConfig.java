@@ -20,12 +20,10 @@ public class FilterConfig {
 
     private boolean enabled = true;
     private FilterMode mode = FilterMode.WHITELIST;
-
     private Set<String> renderTargets = new HashSet<>();
-
     private Set<String> panelTargets = new HashSet<>();
-
     private boolean showEntities = true;
+    private boolean showRawHud = false;
 
     public static FilterConfig getInstance() {
         if (INSTANCE == null) {
@@ -61,12 +59,15 @@ public class FilterConfig {
     public boolean isShowEntities() { return showEntities; }
     public void setShowEntities(boolean showEntities) { this.showEntities = showEntities; save(); }
     public void toggleShowEntities() { setShowEntities(!this.showEntities); }
+    public boolean isShowRawHud() { return showRawHud; }
+    public void setShowRawHud(boolean showRawHud) { this.showRawHud = showRawHud; save(); }
+    public void toggleShowRawHud() { setShowRawHud(!this.showRawHud); }
 
     public boolean shouldShow(String blockId) {
-        if (!enabled) return true;
-        if (renderTargets.isEmpty()) return mode == FilterMode.BLACKLIST;
+        if (!enabled) return false;
+        if (renderTargets.isEmpty()) return mode != FilterMode.BLACKLIST;
         boolean contains = renderTargets.contains(blockId.toLowerCase().trim());
-        return mode == FilterMode.WHITELIST ? contains : !contains;
+        return (mode == FilterMode.WHITELIST) != contains;
     }
 
     public boolean shouldShowInPanel(String blockId) {
@@ -85,6 +86,7 @@ public class FilterConfig {
                 this.renderTargets = loaded.renderTargets != null ? loaded.renderTargets : new HashSet<>();
                 this.panelTargets = loaded.panelTargets != null ? loaded.panelTargets : new HashSet<>();
                 this.showEntities = loaded.showEntities;
+                this.showRawHud = loaded.showRawHud;
             }
         } catch (IOException e) {
             LOGGER.error("Failed to load config", e);

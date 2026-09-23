@@ -25,7 +25,7 @@ public class SchematicRenderRefresher {
                         try {
                             Method markNeedsUpdate = worldRenderer.getClass().getMethod("markNeedsUpdate");
                             markNeedsUpdate.invoke(worldRenderer);
-                        } catch (Exception e) {}
+                        } catch (Exception _) {}
 
                         try {
                             for (Field f : worldRenderer.getClass().getDeclaredFields()) {

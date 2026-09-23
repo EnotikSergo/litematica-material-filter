@@ -20,7 +20,7 @@ public class SchematicOverlayMixin {
     private void onRenderBlock(BlockModelRendererSchematic blockRenderer, BlockAndTintGetter world, BlockState state, BlockPos pos, Vec3 posOffset, IBlockOutputSchematic output, CallbackInfoReturnable<Boolean> cir) {
         if (state != null) {
             String blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-            if (!FilterConfig.getInstance().shouldShow(blockId)) {
+            if (FilterConfig.getInstance().shouldShow(blockId)) {
                 cir.setReturnValue(false);
                 cir.cancel();
             }

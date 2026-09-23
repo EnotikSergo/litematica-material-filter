@@ -18,7 +18,7 @@ public class SchematicWorldMixin {
         BlockState original = cir.getReturnValue();
         if (original != null && !original.isAir()) {
             String blockId = BuiltInRegistries.BLOCK.getKey(original.getBlock()).toString();
-            if (!FilterConfig.getInstance().shouldShow(blockId)) {
+            if (FilterConfig.getInstance().shouldShow(blockId)) {
                 cir.setReturnValue(Blocks.AIR.defaultBlockState());
             }
         }

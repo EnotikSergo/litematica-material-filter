@@ -1,5 +1,6 @@
 {
   "litematicafilter.screen.title": "⬡ Litematica Material Filter",
+  "key.litematicafilter.open_gui": "Litematica Material Filter",
   "litematicafilter.screen.search.narration": "Поиск материалов",
   "litematicafilter.screen.search.placeholder": "Поиск: мангр, oak, редст и т.д...",
   "litematicafilter.screen.button.apply_hud": "Применить к HUD",
@@ -11,9 +12,14 @@
   "litematicafilter.screen.button.mode": "Режим: §e%s",
   "litematicafilter.screen.button.entities.on": "§aСущности: Вкл",
   "litematicafilter.screen.button.entities.off": "§cСущности: Выкл",
+  "litematicafilter.screen.button.rawhud.on": "§aИсходный HUD: ON",
+  "litematicafilter.screen.button.rawhud.off": "§cИсходный HUD: OFF",
+  "litematicafilter.screen.empty.rawhud": "Нет исходных материалов для отображения.",
+  "litematicafilter.screen.hint.rawhud": "§dПоказаны разложенные исходные материалы",
+  "litematicafilter.screen.counter.rawhud": "Исходные материалы: %s",
   "litematicafilter.mode.whitelist": "Белый список",
   "litematicafilter.mode.blacklist": "Черный список",
-  "litematicafilter.screen.status.counts": "§9Инфо HUD: %s §7| §aРендер: %s",
+  "litematicafilter.screen.status.counts": "§aИнфо HUD: %s §7| §9Рендер: %s",
   "litematicafilter.screen.counter": "Показано: §f%1$s§7 / §f%2$s",
   "litematicafilter.screen.hint.controls": "§7ЛКМ = Выбрать для Инфо HUD  |  ПКМ = Выбрать для Рендера",
   "litematicafilter.screen.empty.nodata": "§cНет данных. Загрузи схему.",
@@ -21,6 +27,5 @@
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Фильтрация материалов в информационной панеле по поиску и выбору из списка",
   "modmenu.descriptionTranslation.litematicafilter": "Позволяет фильтровать список материалов по поиску и выбору, дальше выводить в Панель информации только нужные блоки — без ручного нажатия «Игнорировать» на каждый лишний материал.",
-  "litematicafilter.screen.button.open": "Открыть Фильтр",
-  "key.litematicafilter.open_gui": "Litematica Material Filter"
+  "litematicafilter.screen.button.open": "Открыть Фильтр"
 }

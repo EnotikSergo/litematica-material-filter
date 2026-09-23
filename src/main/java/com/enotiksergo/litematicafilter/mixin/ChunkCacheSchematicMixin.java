@@ -20,7 +20,7 @@ public class ChunkCacheSchematicMixin {
         BlockState state = cir.getReturnValue();
         if (state != null && !state.isAir()) {
             String blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-            if (!FilterConfig.getInstance().shouldShow(blockId)) {
+            if (FilterConfig.getInstance().shouldShow(blockId)) {
                 cir.setReturnValue(Blocks.AIR.defaultBlockState());
             }
         }

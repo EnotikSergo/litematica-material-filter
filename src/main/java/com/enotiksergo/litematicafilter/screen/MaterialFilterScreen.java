@@ -4,19 +4,20 @@ import com.enotiksergo.litematicafilter.LitematicaFilterMod;
 import com.enotiksergo.litematicafilter.config.FilterConfig;
 import com.enotiksergo.litematicafilter.filter.MaterialFilterManager;
 import com.enotiksergo.litematicafilter.filter.SchematicRenderRefresher;
+import com.enotiksergo.litematicafilter.materials.CraftTreeAdapter;
+import com.enotiksergo.litematicafilter.materials.MatRow;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
+import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -48,8 +49,11 @@ public class MaterialFilterScreen extends Screen {
     private static final int COL_TEXT_MAIN = 0xFFFFFFFF;
     private static final int COL_TEXT_DIM = 0xFFAAAAAA;
     private static final int COL_TEXT_FILTER = 0xFFFFFFFF;
+    private static final int COL_TEXT_INFO = 0xFFDD88FF;
     private static final int COL_SCROLL_TRACK = 0x40FFFFFF;
     private static final int COL_SCROLL_THUMB = 0xAAFFFFFF;
+    private static final int COL_ENTRY_ROOT = 0x30B08040;
+    private static final int COL_MARK_ROOT = 0xFFE0B040;
 
     private final Set<String> selectedRenderIds = new HashSet<>();
     private final Set<String> selectedPanelIds = new HashSet<>();
@@ -57,18 +61,19 @@ public class MaterialFilterScreen extends Screen {
     private final Screen parent;
     private final FilterConfig config;
 
+    private List<MatRow> infoHudRows = new ArrayList<>();
+
     private EditBox searchField;
     private Button btnToggleEnabled;
     private Button btnToggleMode;
     private Button btnToggleEntities;
-    private Button btnApplyHud;
-    private Button btnApplyRender;
+    private Button btnToggleRawHud;
 
     private int scrollOffset = 0;
     private int visibleEntries = 0;
     private int listWidth = 420;
     private int listX = 0;
-    private List<MaterialListEntry> allEntries = new ArrayList<>();
+    private final List<MaterialListEntry> allEntries = new ArrayList<>();
     private List<MaterialListEntry> filteredEntries = new ArrayList<>();
     private boolean isDraggingScrollbar = false;
 
@@ -87,89 +92,135 @@ public class MaterialFilterScreen extends Screen {
         listX = (this.width - listWidth) / 2;
         loadMaterialsFromLitematica();
 
-        int ctrlBtnWidth = (listWidth - 10) / 3;
+        int ctrlBtnWidth = (listWidth - 15) / 4;
         int ctrlY = CONTROLS_Y;
 
-        btnToggleEnabled = Button.builder(getToggleText(), btn -> {
+        btnToggleEnabled = Button.builder(getToggleText(), _ -> {
             config.toggleEnabled();
             updateControlButtons();
             SchematicRenderRefresher.refreshSchematicRendering();
         }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEnabled);
 
-        btnToggleMode = Button.builder(getModeText(), btn -> {
+        btnToggleMode = Button.builder(getModeText(), _ -> {
             config.setMode(config.getMode().next());
             updateControlButtons();
             SchematicRenderRefresher.refreshSchematicRendering();
         }).bounds(listX + ctrlBtnWidth + 5, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleMode);
 
-        btnToggleEntities = Button.builder(getEntityText(), btn -> {
+        btnToggleEntities = Button.builder(getEntityText(), _ -> {
             config.toggleShowEntities();
             updateControlButtons();
             SchematicRenderRefresher.refreshSchematicRendering();
         }).bounds(listX + (ctrlBtnWidth + 5) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEntities);
 
+        btnToggleRawHud = Button.builder(getRawHudText(), _ -> {
+            config.toggleShowRawHud();
+            updateControlButtons();
+            if (config.isShowRawHud()) {
+                rebuildRawHudRows();
+            }
+            scrollOffset = 0;
+        }).bounds(listX + (ctrlBtnWidth + 5) * 3, ctrlY, ctrlBtnWidth, BTN_H).build();
+        this.addRenderableWidget(btnToggleRawHud);
+
         int searchW = listWidth - 227;
         searchField = new EditBox(this.font, listX, SEARCH_Y, searchW, SEARCH_H,
                 Component.translatable("litematicafilter.screen.search.narration"));
         searchField.setHint(Component.translatable("litematicafilter.screen.search.placeholder"));
-        searchField.setMaxLength(60);
+        searchField.setMaxLength(64);
         searchField.setResponder(this::onSearchChanged);
         this.addRenderableWidget(searchField);
 
         int btn1X = listX + searchW + 5;
         int btn2X = btn1X + 105;
 
-        btnApplyHud = Button.builder(
+        Button btnApplyHud = Button.builder(
                 Component.translatable("litematicafilter.screen.button.apply_hud"),
-                btn -> applyToHud()
+                _ -> applyToHud()
         ).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
         this.addRenderableWidget(btnApplyHud);
 
-        btnApplyRender = Button.builder(
+        Button btnApplyRender = Button.builder(
                 Component.translatable("litematicafilter.screen.button.apply_render"),
-                btn -> applyToRender()
+                _ -> applyToRender()
         ).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
         this.addRenderableWidget(btnApplyRender);
 
         int bottomY = this.height - BOTTOM_BAR_H;
         this.addRenderableWidget(Button.builder(
                 Component.translatable("litematicafilter.screen.button.clear"),
-                btn -> clearFilter()
+                _ -> clearFilter()
         ).bounds(listX, bottomY, 110, BTN_H).build());
         this.addRenderableWidget(Button.builder(
                 Component.translatable("litematicafilter.screen.button.close"),
-                btn -> closeScreen()
+                _ -> closeScreen()
         ).bounds(listX + listWidth - 70, bottomY, 70, BTN_H).build());
 
         int listEndY = this.height - BOTTOM_BAR_H - 6;
         int listAreaH = listEndY - LIST_START_Y;
         this.visibleEntries = Math.max(1, listAreaH / ENTRY_H);
         updateFilteredList(searchField.getValue());
+
+        if (config.isShowRawHud()) {
+            rebuildRawHudRows();
+        }
     }
 
     private void loadMaterialsFromLitematica() {
         allEntries.clear();
         MaterialListBase matList = DataManager.getMaterialList();
+
         if (matList == null) {
-            LitematicaFilterMod.LOGGER.warn("[LitematicaFilter] DataManager.getMaterialList() returned null.");
+            try {
+                SchematicPlacement placement = DataManager.getSchematicPlacementManager()
+                        .getSelectedSchematicPlacement();
+                if (placement != null) {
+                    matList = placement.getMaterialList();
+                    DataManager.setMaterialList(matList);
+                    LitematicaFilterMod.LOGGER.info("[LitematicaFilter] Auto-generated material list from placement.");
+                }
+            } catch (Exception e) {
+                LitematicaFilterMod.LOGGER.warn("[LitematicaFilter] Failed to auto-generate material list", e);
+            }
+        }
+
+        if (matList == null) {
+            LitematicaFilterMod.LOGGER.warn("[LitematicaFilter] No material list available.");
             return;
         }
+
+        if (matList.getMaterialsAll().isEmpty()) {
+            try {
+                matList.reCreateMaterialList();
+                LitematicaFilterMod.LOGGER.info("[LitematicaFilter] Triggered material list recount.");
+            } catch (Exception e) {
+                LitematicaFilterMod.LOGGER.debug("[LitematicaFilter] reCreateMaterialList failed", e);
+            }
+        }
+
         allEntries.addAll(matList.getMaterialsAll());
     }
 
-    private String getBlockId(ItemStack stack) {
-        try {
-            Block block = Block.byItem(stack.getItem());
-            if (block != null && block != Blocks.AIR) {
-                return BuiltInRegistries.BLOCK.getKey(block).toString();
-            }
-            return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        } catch (Exception e) {
-            return "";
+    private void rebuildRawHudRows() {
+        MaterialListBase matList = DataManager.getMaterialList();
+        if (matList == null || matList.getMaterialsAll().isEmpty()) {
+            infoHudRows.clear();
+            return;
         }
+        try {
+            infoHudRows = CraftTreeAdapter.buildFlatList(matList, config.getPanelTargets());
+            LitematicaFilterMod.LOGGER.info("[LitematicaFilter] Info HUD rebuilt: {} rows", infoHudRows.size());
+        } catch (Exception e) {
+            LitematicaFilterMod.LOGGER.warn("[LitematicaFilter] Failed to build info HUD", e);
+            infoHudRows.clear();
+        }
+    }
+
+    private String getBlockId(ItemStack stack) {
+        return CraftTreeAdapter.getItemId(stack);
     }
 
     private void onSearchChanged(String text) {
@@ -225,6 +276,10 @@ public class MaterialFilterScreen extends Screen {
                 matList.ignoreEntry(entry);
             }
         }
+
+        if (config.isShowRawHud()) {
+            rebuildRawHudRows();
+        }
     }
 
     private void applyToRender() {
@@ -258,15 +313,21 @@ public class MaterialFilterScreen extends Screen {
         searchField.setValue("");
         updateFilteredList("");
 
+        if (config.isShowRawHud()) {
+            rebuildRawHudRows();
+        }
+
         SchematicRenderRefresher.refreshSchematicRendering();
     }
 
     private void closeScreen() {
-        if (this.minecraft != null) this.minecraft.setScreenAndShow(parent);
+        this.minecraft.setScreenAndShow(parent);
     }
 
     private Component getToggleText() {
-        return Component.translatable(config.isEnabled() ? "litematicafilter.screen.button.filter.on" : "litematicafilter.screen.button.filter.off");
+        return Component.translatable(config.isEnabled()
+                ? "litematicafilter.screen.button.filter.on"
+                : "litematicafilter.screen.button.filter.off");
     }
 
     private Component getModeText() {
@@ -275,21 +336,30 @@ public class MaterialFilterScreen extends Screen {
     }
 
     private Component getEntityText() {
-        return Component.translatable(config.isShowEntities() ? "litematicafilter.screen.button.entities.on" : "litematicafilter.screen.button.entities.off");
+        return Component.translatable(config.isShowEntities()
+                ? "litematicafilter.screen.button.entities.on"
+                : "litematicafilter.screen.button.entities.off");
+    }
+
+    private Component getRawHudText() {
+        return Component.translatable(config.isShowRawHud()
+                ? "litematicafilter.screen.button.rawhud.on"
+                : "litematicafilter.screen.button.rawhud.off");
     }
 
     private void updateControlButtons() {
         btnToggleEnabled.setMessage(getToggleText());
         btnToggleMode.setMessage(getModeText());
         btnToggleEntities.setMessage(getEntityText());
+        btnToggleRawHud.setMessage(getRawHudText());
     }
 
-    public void renderBackground(GuiGraphicsExtractor ctx, int mx, int my, float delta) {
+    public void renderBackground(GuiGraphicsExtractor ctx) {
         ctx.fill(0, 0, this.width, this.height, 0xB2000000);
     }
 
-    public void extractRenderState(GuiGraphicsExtractor ctx, int mx, int my, float delta) {
-        renderBackground(ctx, mx, my, delta);
+    public void extractRenderState(@NotNull GuiGraphicsExtractor ctx, int mx, int my, float delta) {
+        renderBackground(ctx);
         ctx.fill(listX - 6, 2, listX + listWidth + 6, this.height - 2, COL_PANEL_BG);
         ctx.centeredText(font,
                 Component.translatable("litematicafilter.screen.title")
@@ -301,21 +371,40 @@ public class MaterialFilterScreen extends Screen {
                         selectedPanelIds.size(), selectedRenderIds.size()),
                 this.width / 2, STATUS_Y, COL_TEXT_FILTER);
 
-        ctx.centeredText(font,
-                Component.translatable("litematicafilter.screen.hint.controls"),
-                this.width / 2, HINT_Y, COL_TEXT_DIM);
+        if (!config.isShowRawHud()) {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.hint.controls"),
+                    this.width / 2, HINT_Y, COL_TEXT_DIM);
+        } else {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.hint.rawhud"),
+                    this.width / 2, HINT_Y, COL_TEXT_INFO);
+        }
 
-        ctx.text(font,
-                Component.translatable("litematicafilter.screen.counter",
-                        filteredEntries.size(), allEntries.size()),
-                listX, LIST_START_Y - 6, COL_TEXT_DIM);
+        if (config.isShowRawHud()) {
+            ctx.text(font,
+                    Component.translatable("litematicafilter.screen.counter.rawhud",
+                            infoHudRows.size()),
+                    listX, LIST_START_Y - 6, COL_TEXT_INFO);
+        } else {
+            ctx.text(font,
+                    Component.translatable("litematicafilter.screen.counter",
+                            filteredEntries.size(), allEntries.size()),
+                    listX, LIST_START_Y - 6, COL_TEXT_DIM);
+        }
         ctx.fill(listX, LIST_START_Y + 4, listX + listWidth, LIST_START_Y + 5, COL_SEPARATOR);
 
         int listEndY = this.height - BOTTOM_BAR_H + 6;
-        renderList(ctx, mx, my, listEndY);
 
-        if (filteredEntries.size() > visibleEntries)
-            renderScrollbar(ctx, listX + listWidth + 3, LIST_START_Y, listEndY);
+        if (config.isShowRawHud()) {
+            renderRawHudList(ctx, mx, my, listEndY);
+        } else {
+            renderList(ctx, mx, my, listEndY);
+        }
+
+        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        if (totalItems > visibleEntries)
+            renderScrollbar(ctx, listX + listWidth + 3, listEndY, totalItems);
 
         super.extractRenderState(ctx, mx, my, delta);
 
@@ -323,11 +412,15 @@ public class MaterialFilterScreen extends Screen {
             ctx.centeredText(font,
                     Component.translatable("litematicafilter.screen.empty.nodata"),
                     this.width / 2, this.height / 2, 0xFF5555FF);
-        } else if (filteredEntries.isEmpty()) {
+        } else if (!config.isShowRawHud() && filteredEntries.isEmpty()) {
             ctx.centeredText(font,
                     Component.translatable("litematicafilter.screen.empty.noresults",
                             searchField.getValue()),
                     this.width / 2, this.height / 2, COL_TEXT_DIM);
+        } else if (config.isShowRawHud() && infoHudRows.isEmpty()) {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.rawhud"),
+                    this.width / 2, this.height / 2, COL_TEXT_INFO);
         }
     }
 
@@ -361,17 +454,13 @@ public class MaterialFilterScreen extends Screen {
 
         int bg, mark;
         if (inRender && inPanel) {
-            bg = COL_ENTRY_BOTH;
-            mark = COL_MARK_BOTH;
+            bg = COL_ENTRY_BOTH; mark = COL_MARK_BOTH;
         } else if (inRender) {
-            bg = COL_ENTRY_RENDER;
-            mark = COL_MARK_RENDER;
+            bg = COL_ENTRY_RENDER; mark = COL_MARK_RENDER;
         } else if (inPanel) {
-            bg = COL_ENTRY_PANEL;
-            mark = COL_MARK_PANEL;
+            bg = COL_ENTRY_PANEL; mark = COL_MARK_PANEL;
         } else {
-            bg = hovered ? COL_ENTRY_HOVER : COL_ENTRY_NORMAL;
-            mark = 0;
+            bg = hovered ? COL_ENTRY_HOVER : COL_ENTRY_NORMAL; mark = 0;
         }
 
         ctx.fill(x, y, x + listWidth, y + ENTRY_H - 1, bg);
@@ -397,19 +486,62 @@ public class MaterialFilterScreen extends Screen {
         } catch (Exception ignored) {}
     }
 
-    private void renderScrollbar(GuiGraphicsExtractor ctx, int x, int startY, int endY) {
-        int trackH = endY - startY;
-        int thumbH = Math.max(16, trackH * visibleEntries / filteredEntries.size());
-        int maxScr = filteredEntries.size() - visibleEntries;
-        int thumbY = startY + (maxScr > 0
+    private void renderRawHudList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
+        for (int i = 0; i < visibleEntries; i++) {
+            int idx = i + scrollOffset;
+            if (idx >= infoHudRows.size()) break;
+            MatRow row = infoHudRows.get(idx);
+            int ey = LIST_START_Y + 7 + i * ENTRY_H;
+            if (ey + ENTRY_H > endY) break;
+            renderRawHudEntry(ctx, row, listX, ey, mx, my);
+        }
+    }
+
+    private void renderRawHudEntry(GuiGraphicsExtractor ctx, MatRow row,
+                                    int x, int y, int mx, int my) {
+        boolean hovered = mx >= x && mx < x + listWidth && my >= y && my < y + ENTRY_H;
+
+        int bg = row.isRoot ? COL_ENTRY_ROOT : (hovered ? COL_ENTRY_HOVER : COL_ENTRY_NORMAL);
+        int mark = row.isRoot ? COL_MARK_ROOT : 0;
+
+        ctx.fill(x, y, x + listWidth, y + ENTRY_H - 1, bg);
+        if (mark != 0) ctx.fill(x, y, x + 3, y + ENTRY_H - 1, mark);
+
+        ctx.item(row.stack, x + 3, y + 3);
+
+        String label = row.displayName;
+        if (row.isRoot) {
+            label = "§6" + label;
+        }
+
+        int maxNameW = listWidth - 80;
+        String nameStr = font.width(label) > maxNameW
+                ? font.plainSubstrByWidth(label, maxNameW - 6) + "…"
+                : label;
+        ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
+
+        String cnt = row.missing > 0
+                ? row.missing + " §7/ " + row.total
+                : "§a0 §7/ " + row.total;
+        int cColor = row.missing > 0 ? COL_COUNT_MISS : COL_COUNT_OK;
+        ctx.text(font, Component.literal(cnt),
+                x + listWidth - font.width(cnt) - 2, y + 7, cColor);
+    }
+
+    private void renderScrollbar(GuiGraphicsExtractor ctx, int x, int endY, int totalItems) {
+        int trackH = endY - MaterialFilterScreen.LIST_START_Y;
+        int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
+        int maxScr = totalItems - visibleEntries;
+        int thumbY = MaterialFilterScreen.LIST_START_Y + (maxScr > 0
                 ? (int) ((float) scrollOffset / maxScr * (trackH - thumbH)) : 0);
-        ctx.fill(x, startY, x + 4, endY, COL_SCROLL_TRACK);
+        ctx.fill(x, MaterialFilterScreen.LIST_START_Y, x + 4, endY, COL_SCROLL_TRACK);
         ctx.fill(x, thumbY, x + 4, thumbY + thumbH, COL_SCROLL_THUMB);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double hScroll, double vScroll) {
-        int maxScroll = Math.max(0, filteredEntries.size() - visibleEntries);
+        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int maxScroll = Math.max(0, totalItems - visibleEntries);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int) vScroll));
         return true;
     }
@@ -422,12 +554,13 @@ public class MaterialFilterScreen extends Screen {
         double mouseX = click.x();
         double mouseY = click.y();
 
-        if (filteredEntries.size() > visibleEntries) {
+        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        if (totalItems > visibleEntries) {
             int listEndY = this.height - BOTTOM_BAR_H + 6;
             int scrollX = listX + listWidth + 3;
             int trackH = listEndY - LIST_START_Y;
-            int thumbH = Math.max(16, trackH * visibleEntries / filteredEntries.size());
-            int maxScr = filteredEntries.size() - visibleEntries;
+            int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
+            int maxScr = totalItems - visibleEntries;
             int thumbY = LIST_START_Y + (maxScr > 0
                     ? (int) ((float) scrollOffset / maxScr * (trackH - thumbH)) : 0);
             if (mouseX >= scrollX && mouseX <= scrollX + 4
@@ -435,6 +568,10 @@ public class MaterialFilterScreen extends Screen {
                 isDraggingScrollbar = true;
                 return true;
             }
+        }
+
+        if (config.isShowRawHud()) {
+            return super.mouseClicked(click, doubled);
         }
 
         int button = click.button();
@@ -466,20 +603,21 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent click, double offsetX, double offsetY) {
+    public boolean mouseDragged(@NotNull MouseButtonEvent click, double offsetX, double offsetY) {
         boolean handled = super.mouseDragged(click, offsetX, offsetY);
         if (!isDraggingScrollbar) return handled;
+        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
         int listEndY = this.height - BOTTOM_BAR_H + 6;
         int trackH = listEndY - LIST_START_Y;
-        int thumbH = Math.max(16, trackH * visibleEntries / filteredEntries.size());
+        int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
         float ratio = (float) (click.y() - LIST_START_Y - (thumbH / 2.0)) / (trackH - thumbH);
-        int maxScroll = Math.max(0, filteredEntries.size() - visibleEntries);
+        int maxScroll = Math.max(0, totalItems - visibleEntries);
         scrollOffset = Math.max(0, Math.min(maxScroll, Math.round(ratio * maxScroll)));
         return true;
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent click) {
+    public boolean mouseReleased(@NotNull MouseButtonEvent click) {
         isDraggingScrollbar = false;
         return super.mouseReleased(click);
     }
