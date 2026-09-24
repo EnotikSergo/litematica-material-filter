@@ -60,10 +60,16 @@ public class MaterialFilterScreen extends Screen {
     private final Set<String> selectedPanelIds = new HashSet<>();
     private final Screen parent;
     private final FilterConfig config;
+
     private List<MatRow> infoHudRows = new ArrayList<>();
+    private List<MatRow> filteredInfoHudRows = new ArrayList<>();
 
     private EditBox searchField;
     private Button btnToggleEnabled, btnToggleMode, btnToggleEntities, btnToggleRawHud;
+
+    private Button btnApplyHud, btnApplyRender;
+    private Button btnExpandAll, btnCollapseAll;
+
     private int scrollOffset = 0, visibleEntries = 0, listWidth = 420, listX = 0;
     private final List<MaterialListEntry> allEntries = new ArrayList<>();
     private List<MaterialListEntry> filteredEntries = new ArrayList<>();
@@ -86,14 +92,13 @@ public class MaterialFilterScreen extends Screen {
 
         int ctrlBtnWidth = (listWidth - 15) / 4;
         int ctrlY = CONTROLS_Y;
-
-        btnToggleEnabled = Button.builder(getToggleText(), _ -> { config.toggleEnabled(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleEnabled = Button.builder(getToggleText(), _ -> { config.toggleEnabled(); updateButtonsState(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEnabled);
-        btnToggleMode = Button.builder(getModeText(), _ -> { config.setMode(config.getMode().next()); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + ctrlBtnWidth + 5, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleMode = Button.builder(getModeText(), _ -> { config.setMode(config.getMode().next()); updateButtonsState(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + ctrlBtnWidth + 5, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleMode);
-        btnToggleEntities = Button.builder(getEntityText(), _ -> { config.toggleShowEntities(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + (ctrlBtnWidth + 5) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleEntities = Button.builder(getEntityText(), _ -> { config.toggleShowEntities(); updateButtonsState(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + (ctrlBtnWidth + 5) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEntities);
-        btnToggleRawHud = Button.builder(getRawHudText(), _ -> { config.toggleShowRawHud(); updateControlButtons(); if (config.isShowRawHud()) rebuildTreeAndRows(); scrollOffset = 0; }).bounds(listX + (ctrlBtnWidth + 5) * 3, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleRawHud = Button.builder(getRawHudText(), _ -> { config.toggleShowRawHud(); updateButtonsState(); if (config.isShowRawHud()) rebuildTreeAndRows(); scrollOffset = 0; }).bounds(listX + (ctrlBtnWidth + 5) * 3, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleRawHud);
 
         int searchW = listWidth - 227;
@@ -105,8 +110,16 @@ public class MaterialFilterScreen extends Screen {
 
         int btn1X = listX + searchW + 5;
         int btn2X = btn1X + 105;
-        this.addRenderableWidget(Button.builder(Component.translatable("litematicafilter.screen.button.apply_hud"), _ -> applyToHud()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build());
-        this.addRenderableWidget(Button.builder(Component.translatable("litematicafilter.screen.button.apply_render"), _ -> applyToRender()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build());
+
+        btnApplyHud = Button.builder(Component.translatable("litematicafilter.screen.button.apply_hud"), _ -> applyToHud()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
+        this.addRenderableWidget(btnApplyHud);
+        btnApplyRender = Button.builder(Component.translatable("litematicafilter.screen.button.apply_render"), _ -> applyToRender()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
+        this.addRenderableWidget(btnApplyRender);
+
+        btnExpandAll = Button.builder(Component.translatable("litematicafilter.screen.button.expand_all"), _ -> expandAllMaterials()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
+        this.addRenderableWidget(btnExpandAll);
+        btnCollapseAll = Button.builder(Component.translatable("litematicafilter.screen.button.collapse_all"), _ -> collapseAllMaterials()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
+        this.addRenderableWidget(btnCollapseAll);
 
         int bottomY = this.height - BOTTOM_BAR_H;
         this.addRenderableWidget(Button.builder(Component.translatable("litematicafilter.screen.button.clear"), _ -> clearFilter()).bounds(listX, bottomY, 110, BTN_H).build());
@@ -114,6 +127,8 @@ public class MaterialFilterScreen extends Screen {
 
         int listEndY = this.height - BOTTOM_BAR_H - 6;
         this.visibleEntries = Math.max(1, (listEndY - LIST_START_Y) / ENTRY_H);
+
+        updateButtonsState();
         updateFilteredList(searchField.getValue());
         if (config.isShowRawHud()) rebuildTreeAndRows();
     }
@@ -131,7 +146,6 @@ public class MaterialFilterScreen extends Screen {
             } catch (Exception e) { LitematicaFilterMod.LOGGER.warn("Failed to auto-generate material list", e); }
         }
         if (matList == null) return;
-
         if (matList.getMaterialsAll().isEmpty()) {
             matList.reCreateMaterialList();
             MaterialListBase finalMatList = matList;
@@ -147,56 +161,80 @@ public class MaterialFilterScreen extends Screen {
     }
 
     private void rebuildTreeAndRows() {
-        MaterialListBase matList = getOrInitMaterialList();
-        if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); return; }
+        MaterialListBase matList = DataManager.getMaterialList();
+        if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); filteredInfoHudRows.clear(); return; }
         try {
             TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getPanelTargets());
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getPanelTargets());
-
-            List<MatRow> allRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
-
-            List<MatRow> visibleRows = new ArrayList<>();
-            for (MatRow row : allRows) {
-                String idLower = row.itemId.toLowerCase().trim();
-
-                if (row.missing <= 0 && !row.isExpandedChild) {
-                    RawHudRenderer.markAsCollected(idLower);
-                    continue;
-                }
-                if (RawHudRenderer.isHidden(idLower) && !row.isExpandedChild) {
-                    continue;
-                }
-                visibleRows.add(row);
-            }
-            infoHudRows = visibleRows;
-        } catch (Exception e) { infoHudRows.clear(); }
+            infoHudRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
+            updateFilteredList(searchField != null ? searchField.getValue() : "");
+        } catch (Exception e) { infoHudRows.clear(); filteredInfoHudRows.clear(); }
     }
 
-    private MaterialListBase getOrInitMaterialList() {
+    private void expandAllMaterials() {
         MaterialListBase matList = DataManager.getMaterialList();
-        if (matList == null || matList.getMaterialsAll().isEmpty()) {
-            try {
-                SchematicPlacement placement = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
-                if (placement != null) {
-                    matList = placement.getMaterialList();
-                    DataManager.setMaterialList(matList);
-                    if (matList.getMaterialsAll().isEmpty()) {
-                        matList.reCreateMaterialList();
-                    }
-                }
-            } catch (Exception ignored) {}
+        if (matList == null || matList.getMaterialsAll().isEmpty()) return;
+
+        try {
+            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getPanelTargets());
+            Set<String> toExpand = new HashSet<>();
+
+            collectAllExpandable(tree, toExpand);
+
+            config.expandAll(toExpand);
+            rebuildTreeAndRows();
+        } catch (Exception e) {
+            LitematicaFilterMod.LOGGER.warn("Failed to expand all materials", e);
         }
-        return matList;
+    }
+
+    private void collectAllExpandable(TreeNode node, Set<String> ids) {
+        if (node == null) return;
+
+        if (node.hasRecipe) {
+            ids.add(node.itemId.toLowerCase().trim());
+        }
+
+        for (TreeNode child : node.children) {
+            collectAllExpandable(child, ids);
+        }
+    }
+
+    private void collapseAllMaterials() {
+        config.clearExpanded();
+        rebuildTreeAndRows();
     }
 
     private String getBlockId(ItemStack stack) { return CraftTreeAdapter.getItemId(stack); }
-    private void onSearchChanged(String text) { updateFilteredList(text); scrollOffset = 0; }
+
+    private void onSearchChanged(String text) {
+        updateFilteredList(text);
+        scrollOffset = 0;
+    }
+
     private void updateFilteredList(String query) {
         String q = query.toLowerCase(Locale.ROOT).trim();
-        filteredEntries = q.isEmpty() ? new ArrayList<>(allEntries) : allEntries.stream().filter(e -> matchesQuery(e, q)).collect(Collectors.toList());
+        if (config.isShowRawHud()) {
+            if (q.isEmpty()) {
+                filteredInfoHudRows = new ArrayList<>(infoHudRows);
+            } else {
+                filteredInfoHudRows = infoHudRows.stream()
+                        .filter(r -> r.itemId.toLowerCase(Locale.ROOT).contains(q) || r.displayName.toLowerCase(Locale.ROOT).contains(q))
+                        .collect(Collectors.toList());
+            }
+        } else {
+            if (q.isEmpty()) {
+                filteredEntries = new ArrayList<>(allEntries);
+            } else {
+                filteredEntries = allEntries.stream()
+                        .filter(e -> matchesQuery(e, q))
+                        .collect(Collectors.toList());
+            }
+        }
     }
+
     private boolean matchesQuery(MaterialListEntry entry, String query) {
         try {
             ItemStack stack = entry.getStack();
@@ -244,9 +282,6 @@ public class MaterialFilterScreen extends Screen {
         MaterialFilterManager.getInstance().clearFilter();
         selectedRenderIds.clear(); selectedPanelIds.clear();
         searchField.setValue(""); updateFilteredList("");
-
-        RawHudRenderer.clearHiddenItems();
-
         if (config.isShowRawHud()) rebuildTreeAndRows();
         SchematicRenderRefresher.refreshSchematicRendering();
         RawHudRenderer.invalidateCache();
@@ -258,9 +293,18 @@ public class MaterialFilterScreen extends Screen {
     private Component getModeText() { return Component.translatable("litematicafilter.screen.button.mode", Component.translatable("litematicafilter.mode." + config.getMode().name().toLowerCase())); }
     private Component getEntityText() { return Component.translatable(config.isShowEntities() ? "litematicafilter.screen.button.entities.on" : "litematicafilter.screen.button.entities.off"); }
     private Component getRawHudText() { return Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.button.rawhud.on" : "litematicafilter.screen.button.rawhud.off"); }
-    private void updateControlButtons() {
-        btnToggleEnabled.setMessage(getToggleText()); btnToggleMode.setMessage(getModeText());
-        btnToggleEntities.setMessage(getEntityText()); btnToggleRawHud.setMessage(getRawHudText());
+
+    private void updateButtonsState() {
+        btnToggleEnabled.setMessage(getToggleText());
+        btnToggleMode.setMessage(getModeText());
+        btnToggleEntities.setMessage(getEntityText());
+        btnToggleRawHud.setMessage(getRawHudText());
+
+        boolean isRawHud = config.isShowRawHud();
+        btnApplyHud.visible = !isRawHud;
+        btnApplyRender.visible = !isRawHud;
+        btnExpandAll.visible = isRawHud;
+        btnCollapseAll.visible = isRawHud;
     }
 
     public void renderBackground(GuiGraphicsExtractor ctx) { ctx.fill(0, 0, this.width, this.height, 0xB2000000); }
@@ -270,11 +314,11 @@ public class MaterialFilterScreen extends Screen {
         ctx.fill(listX - 6, 2, listX + listWidth + 6, this.height - 2, COL_PANEL_BG);
         ctx.centeredText(font, Component.translatable("litematicafilter.screen.title").withStyle(net.minecraft.ChatFormatting.BOLD), this.width / 2, TITLE_Y, COL_TEXT_MAIN);
         ctx.centeredText(font, Component.translatable("litematicafilter.screen.status.counts", selectedPanelIds.size(), selectedRenderIds.size()), this.width / 2, STATUS_Y, COL_TEXT_FILTER);
-
         ctx.centeredText(font, Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.hint.rawhud" : "litematicafilter.screen.hint.controls"), this.width / 2, HINT_Y, config.isShowRawHud() ? COL_TEXT_INFO : COL_TEXT_DIM);
 
+        int currentRawHudSize = filteredInfoHudRows.size();
         ctx.text(font, Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.counter.rawhud" : "litematicafilter.screen.counter",
-                config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size(),
+                config.isShowRawHud() ? currentRawHudSize : filteredEntries.size(),
                 config.isShowRawHud() ? 0 : allEntries.size()), listX, LIST_START_Y - 6, config.isShowRawHud() ? COL_TEXT_INFO : COL_TEXT_DIM);
 
         ctx.fill(listX, LIST_START_Y + 4, listX + listWidth, LIST_START_Y + 5, COL_SEPARATOR);
@@ -283,7 +327,7 @@ public class MaterialFilterScreen extends Screen {
         if (config.isShowRawHud()) renderRawHudList(ctx, mx, my, listEndY);
         else renderList(ctx, mx, my, listEndY);
 
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? currentRawHudSize : filteredEntries.size();
         if (totalItems > visibleEntries) renderScrollbar(ctx, listX + listWidth + 3, listEndY, totalItems);
 
         super.extractRenderState(ctx, mx, my, delta);
@@ -303,16 +347,13 @@ public class MaterialFilterScreen extends Screen {
         ItemStack stack; String blockId, displayName;
         try { stack = entry.getStack(); blockId = getBlockId(stack); displayName = stack.getHoverName().getString(); } catch (Exception e) { return; }
         if (blockId.isEmpty()) return;
-
         boolean inRender = selectedRenderIds.contains(blockId), inPanel = selectedPanelIds.contains(blockId);
         boolean hovered = mx >= x && mx < x + listWidth && my >= y && my < y + ENTRY_H;
         int bg = (inRender && inPanel) ? COL_ENTRY_BOTH : (inRender ? COL_ENTRY_RENDER : (inPanel ? COL_ENTRY_PANEL : (hovered ? COL_ENTRY_HOVER : COL_ENTRY_NORMAL)));
         int mark = (inRender && inPanel) ? COL_MARK_BOTH : (inRender ? COL_MARK_RENDER : (inPanel ? COL_MARK_PANEL : 0));
-
         ctx.fill(x, y, x + listWidth, y + ENTRY_H - 1, bg);
         if (mark != 0) ctx.fill(x, y, x + 3, y + ENTRY_H - 1, mark);
         ctx.item(stack, x + 3, y + 3);
-
         String nameStr = font.width(displayName) > listWidth - 80 ? font.plainSubstrByWidth(displayName, listWidth - 86) + "…" : displayName;
         ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
         try {
@@ -327,10 +368,10 @@ public class MaterialFilterScreen extends Screen {
     private void renderRawHudList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
         for (int i = 0; i < visibleEntries; i++) {
             int idx = i + scrollOffset;
-            if (idx >= infoHudRows.size()) break;
+            if (idx >= filteredInfoHudRows.size()) break;
             int ey = LIST_START_Y + 7 + i * ENTRY_H;
             if (ey + ENTRY_H > endY) break;
-            renderRawHudEntry(ctx, infoHudRows.get(idx), listX, ey, mx, my);
+            renderRawHudEntry(ctx, filteredInfoHudRows.get(idx), listX, ey, mx, my);
         }
     }
 
@@ -341,14 +382,11 @@ public class MaterialFilterScreen extends Screen {
         ctx.fill(x, y, x + listWidth, y + ENTRY_H - 1, bg);
         if (mark != 0) ctx.fill(x, y, x + 3, y + ENTRY_H - 1, mark);
         ctx.item(row.stack, x + 3, y + 3);
-
         String label = row.displayName;
         if (row.hasRecipe) label = (row.isExpanded ? "§a[-] §r" : "§e[+] §r") + label;
         else if (row.isRoot) label = "§6" + label;
-
         String nameStr = font.width(label) > listWidth - 100 ? font.plainSubstrByWidth(label, listWidth - 106) + "…" : label;
         ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
-
         String cnt = row.available + " / " + row.total;
         ctx.text(font, Component.literal(cnt), x + listWidth - font.width(cnt) - 2, y + 7, (row.available >= row.total) ? COL_COUNT_OK : COL_COUNT_MISS);
     }
@@ -363,7 +401,7 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override public boolean mouseScrolled(double mx, double my, double hScroll, double vScroll) {
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         scrollOffset = Math.max(0, Math.min(Math.max(0, totalItems - visibleEntries), scrollOffset - (int) vScroll));
         return true;
     }
@@ -373,7 +411,7 @@ public class MaterialFilterScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         double mouseX = click.x(), mouseY = click.y();
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
 
         if (totalItems > visibleEntries) {
             int listEndY = this.height - BOTTOM_BAR_H + 6;
@@ -390,8 +428,8 @@ public class MaterialFilterScreen extends Screen {
             if (click.button() == 0 && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
                 int clickedRow = (int) ((mouseY - LIST_START_Y - 10) / ENTRY_H);
                 int entryIndex = scrollOffset + clickedRow;
-                if (entryIndex >= 0 && entryIndex < infoHudRows.size()) {
-                    MatRow row = infoHudRows.get(entryIndex);
+                if (entryIndex >= 0 && entryIndex < filteredInfoHudRows.size()) {
+                    MatRow row = filteredInfoHudRows.get(entryIndex);
                     if (row.hasRecipe) {
                         config.toggleExpanded(row.itemId);
                         rebuildTreeAndRows();
@@ -422,7 +460,7 @@ public class MaterialFilterScreen extends Screen {
     @Override public boolean mouseDragged(@NotNull MouseButtonEvent click, double offsetX, double offsetY) {
         boolean handled = super.mouseDragged(click, offsetX, offsetY);
         if (!isDraggingScrollbar) return handled;
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         int trackH = (this.height - BOTTOM_BAR_H + 6) - LIST_START_Y;
         int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
         float ratio = (float) (click.y() - LIST_START_Y - (thumbH / 2.0)) / (trackH - thumbH);

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -111,5 +112,16 @@ public class FilterConfig {
         File file = CONFIG_PATH.toFile();
         try (FileWriter writer = new FileWriter(file)) { GSON.toJson(this, writer); }
         catch (IOException e) { LOGGER.error("Failed to save config", e); }
+    }
+
+    public void expandAll(Set<String> ids) {
+        boolean changed = false;
+        for (String id : ids) {
+            if (this.expandedItems.add(id.toLowerCase().trim())) changed = true;
+        }
+        if (changed) {
+            save();
+            RawHudRenderer.invalidateCache();
+        }
     }
 }

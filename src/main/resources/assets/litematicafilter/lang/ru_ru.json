@@ -14,6 +14,8 @@
   "litematicafilter.screen.button.entities.off": "§cСущности: Выкл",
   "litematicafilter.screen.button.rawhud.on": "§aИсходный HUD: ON",
   "litematicafilter.screen.button.rawhud.off": "§cИсходный HUD: OFF",
+  "litematicafilter.screen.button.expand_all": "§aРаскрыть все",
+  "litematicafilter.screen.button.collapse_all": "§cСкрыть все",
   "litematicafilter.screen.empty.rawhud": "Нет исходных материалов для отображения.",
   "litematicafilter.screen.hint.rawhud": "§dПоказаны разложенные исходные материалы",
   "litematicafilter.screen.counter.rawhud": "Исходные материалы: %s",

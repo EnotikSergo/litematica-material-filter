@@ -16,6 +16,8 @@
   "litematicafilter.screen.button.rawhud.off": "§cRaw HUD: OFF",
   "litematicafilter.screen.empty.rawhud": "No raw materials to display.",
   "litematicafilter.screen.hint.rawhud": "§dShowing decomposed raw materials",
+  "litematicafilter.screen.button.expand_all": "§aExpand All",
+  "litematicafilter.screen.button.collapse_all": "§cCollapse All",
   "litematicafilter.screen.counter.rawhud": "Raw materials: %s",
   "litematicafilter.mode.whitelist": "Whitelist",
   "litematicafilter.mode.blacklist": "Blacklist",
