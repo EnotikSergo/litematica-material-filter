@@ -3,29 +3,27 @@ package com.enotiksergo.litematicafilter.hud;
 import com.enotiksergo.litematicafilter.config.FilterConfig;
 import com.enotiksergo.litematicafilter.config.HudConfig;
 import com.enotiksergo.litematicafilter.materials.CraftTreeAdapter;
-import com.enotiksergo.litematicafilter.materials.MatRow;
-import com.enotiksergo.litematicafilter.materials.TreeNode;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix3x2fStack;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-public class RawHudRenderer {
-    private static List<MatRow> cachedRows = null;
+public class MaterialHudRenderer {
+    private static List<MaterialRow> cachedRows = null;
     private static long lastRebuildTime = 0;
     private static final Set<String> hiddenItems = new HashSet<>();
 
     public static void render(GuiGraphicsExtractor ctx, DeltaTracker tickDelta) {
-        if (!FilterConfig.getInstance().isShowRawHud()) return;
+        if (!FilterConfig.getInstance().isShowMaterialHud()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
@@ -66,16 +64,12 @@ public class RawHudRenderer {
         pose.scale(scale, scale);
 
         for (int i = 0; i < linesToRender; i++) {
-            MatRow row = cachedRows.get(i);
+            MaterialRow row = cachedRows.get(i);
             int currentY = padding + i * lineHeight;
 
             ctx.item(row.stack, padding, currentY - 2);
 
             String name = row.displayName;
-            if (row.hasRecipe) {
-                name = (row.isExpanded ? "§a[-] §r" : "§e[+] §r") + name;
-            }
-
             if (mc.font.width(name) > nameMaxWidth) {
                 name = mc.font.plainSubstrByWidth(name, nameMaxWidth - 6) + "...";
             }
@@ -84,7 +78,6 @@ public class RawHudRenderer {
 
             String countStr = CraftTreeAdapter.formatCountForHud(row.missing);
             int countColor = 0xFFFFAA00;
-
             int countX = rawWidth - padding - mc.font.width(countStr);
             ctx.text(mc.font, Component.literal(countStr), countX, currentY, countColor);
         }
@@ -100,28 +93,59 @@ public class RawHudRenderer {
             return;
         }
         try {
-            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getMaterialTargets());
+            Set<String> materialTargets = config.getMaterialTargets();
+            boolean filterByMaterial = materialTargets != null && !materialTargets.isEmpty();
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
+            Map<String, Integer> invCounts = getInventoryCounts();
 
-            List<MatRow> allRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
-            List<MatRow> visibleRows = new ArrayList<>();
-            for (MatRow row : allRows) {
-                String idLower = row.itemId.toLowerCase().trim();
-                if (row.missing <= 0 && !row.isExpandedChild) {
-                    hiddenItems.add(idLower);
+            List<MaterialRow> rows = new ArrayList<>();
+            for (MaterialListEntry entry : matList.getMaterialsAll()) {
+                ItemStack stack = entry.getStack();
+                String blockId = CraftTreeAdapter.getItemId(stack).toLowerCase().trim();
+                if (blockId.isEmpty()) continue;
+                if (filterByMaterial && !materialTargets.contains(blockId)) continue;
+
+                long total = 0;
+                try { total = entry.getCountTotal(); } catch (Exception ignored) {}
+                long available = invCounts.getOrDefault(blockId, 0);
+                long missing = Math.max(0, total - available);
+
+                if (missing <= 0) {
+                    hiddenItems.add(blockId);
                     continue;
                 }
-                if (hiddenItems.contains(idLower) && !row.isExpandedChild) {
-                    continue;
-                }
-                visibleRows.add(row);
+                if (hiddenItems.contains(blockId)) continue;
+
+                rows.add(new MaterialRow(stack, blockId, stack.getHoverName().getString(), total, available, missing));
             }
-            cachedRows = visibleRows;
+
+            rows.sort((a, b) -> {
+                boolean aPri = priorityIds.contains(a.blockId);
+                boolean bPri = priorityIds.contains(b.blockId);
+                if (aPri != bPri) return aPri ? -1 : 1;
+                return Long.compare(b.total, a.total);
+            });
+            cachedRows = rows;
         } catch (Exception e) {
             cachedRows = List.of();
         }
+    }
+
+    private static Map<String, Integer> getInventoryCounts() {
+        Map<String, Integer> counts = new HashMap<>();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return counts;
+        Inventory inv = mc.player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                String id = CraftTreeAdapter.getItemId(stack).toLowerCase().trim();
+                if (!id.isEmpty()) counts.merge(id, stack.getCount(), Integer::sum);
+            }
+        }
+        return counts;
     }
 
     private static MaterialListBase getOrInitMaterialList() {
@@ -155,5 +179,23 @@ public class RawHudRenderer {
     public static void clearHiddenItems() {
         hiddenItems.clear();
         invalidateCache();
+    }
+
+    private static class MaterialRow {
+        final ItemStack stack;
+        final String blockId;
+        final String displayName;
+        final long total;
+        final long available;
+        final long missing;
+
+        MaterialRow(ItemStack stack, String blockId, String displayName, long total, long available, long missing) {
+            this.stack = stack;
+            this.blockId = blockId;
+            this.displayName = displayName;
+            this.total = total;
+            this.available = available;
+            this.missing = missing;
+        }
     }
 }

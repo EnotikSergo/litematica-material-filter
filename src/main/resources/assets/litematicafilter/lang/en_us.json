@@ -1,8 +1,10 @@
 {
   "litematicafilter.screen.title": "⬡ Litematica Material Filter",
   "key.litematicafilter.open_gui": "Litematica Material Filter",
+
   "litematicafilter.screen.search.narration": "Search materials",
   "litematicafilter.screen.search.placeholder": "Search: oak, redst etc.",
+
   "litematicafilter.screen.button.apply_hud": "Apply to HUD",
   "litematicafilter.screen.button.apply_render": "Apply Render",
   "litematicafilter.screen.button.clear": "✕ Clear Filter",
@@ -14,20 +16,29 @@
   "litematicafilter.screen.button.entities.off": "§cEntities: OFF",
   "litematicafilter.screen.button.rawhud.on": "§aRaw HUD: ON",
   "litematicafilter.screen.button.rawhud.off": "§cRaw HUD: OFF",
-  "litematicafilter.screen.empty.rawhud": "No raw materials to display.",
-  "litematicafilter.screen.hint.rawhud": "§dShowing decomposed raw materials",
   "litematicafilter.screen.button.expand_all": "§aExpand All",
   "litematicafilter.screen.button.collapse_all": "§cCollapse All",
+  "litematicafilter.screen.button.open": "Open Filter",
+  "litematicafilter.screen.button.materialhud.on": "§aMaterial HUD: ON",
+  "litematicafilter.screen.button.materialhud.off": "§cMaterial HUD: OFF",
+
+  "litematicafilter.screen.empty.rawhud": "No raw materials to display.",
+  "litematicafilter.screen.empty.nodata": "No data. Load a schematic.",
+  "litematicafilter.screen.empty.noresults": "Nothing found for \"%1$s\"",
+
+  "litematicafilter.screen.hint.rawhud": "Showing decomposed raw materials",
   "litematicafilter.screen.counter.rawhud": "Raw materials: %s",
-  "litematicafilter.mode.whitelist": "Whitelist",
-  "litematicafilter.mode.blacklist": "Blacklist",
+
   "litematicafilter.screen.status.counts": "§aInfo HUD: %s §7| §9Render: %s",
-  "litematicafilter.screen.counter": "Shown: §f%1$s§7 / §f%2$s",
-  "litematicafilter.screen.hint.controls": "§7LMB = For Info HUD  |  RMB = For Render",
-  "litematicafilter.screen.empty.nodata": "§cNo data. Load a schematic.",
-  "litematicafilter.screen.empty.noresults": "§7Nothing found for \"§f%1$s§7\"",
+  "litematicafilter.screen.counter": "Shown: %1$s / %2$s",
+  "litematicafilter.screen.hint.controls": "LMB = For Info HUD  |  RMB = For Render",
+
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Filtering materials in the Info HUD by search query and selecting from the list",
   "modmenu.descriptionTranslation.litematicafilter": "It allows you to filter the list of materials and selecting on request and display only the necessary blocks in Info HUD — without manually clicking \"Ignore\" on each superfluous material.",
-  "litematicafilter.screen.button.open": "Open Filter"
+
+  "litematicafilter.mode.whitelist": "Whitelist",
+  "litematicafilter.mode.blacklist": "Blacklist",
+
+  "litematicafilter.hud.material.title": "§bMaterial HUD"
 }

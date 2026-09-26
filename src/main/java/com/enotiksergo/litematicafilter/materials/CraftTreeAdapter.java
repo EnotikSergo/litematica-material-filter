@@ -150,7 +150,7 @@ public class CraftTreeAdapter {
         }
     }
 
-    private static Map<String, Integer> getInventoryCounts() {
+    public static Map<String, Integer> getInventoryCounts() {
         Map<String, Integer> counts = new HashMap<>();
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return counts;
@@ -185,7 +185,7 @@ public class CraftTreeAdapter {
         long stacks = total / 64;
         long remainder = total % 64;
         if (stacks > 0) {
-            return total + " (" + stacks + "x64+" + remainder + ")";
+            return total + " (" + stacks + " x 64 + " + remainder + ")";
         }
         return String.valueOf(total);
     }

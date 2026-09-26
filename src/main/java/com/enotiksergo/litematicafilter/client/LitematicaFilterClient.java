@@ -2,6 +2,7 @@ package com.enotiksergo.litematicafilter.client;
 
 import com.enotiksergo.litematicafilter.LitematicaFilterMod;
 import com.enotiksergo.litematicafilter.config.FilterConfig;
+import com.enotiksergo.litematicafilter.hud.MaterialHudRenderer;
 import com.enotiksergo.litematicafilter.hud.RawHudRenderer;
 import com.enotiksergo.litematicafilter.screen.MaterialFilterScreen;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -33,10 +34,14 @@ public class LitematicaFilterClient implements ClientModInitializer {
                 }
             }
         });
-
         HudElementRegistry.addLast(
                 Identifier.fromNamespaceAndPath(LitematicaFilterMod.MOD_ID, "raw_hud"),
                 RawHudRenderer::render
+        );
+
+        HudElementRegistry.addLast(
+                Identifier.fromNamespaceAndPath(LitematicaFilterMod.MOD_ID, "material_hud"),
+                MaterialHudRenderer::render
         );
     }
 }

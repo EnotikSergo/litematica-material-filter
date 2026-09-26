@@ -1,8 +1,10 @@
 {
   "litematicafilter.screen.title": "⬡ Litematica Material Filter",
   "key.litematicafilter.open_gui": "Litematica Material Filter",
+
   "litematicafilter.screen.search.narration": "Поиск материалов",
   "litematicafilter.screen.search.placeholder": "Поиск: мангр, oak, редст и т.д...",
+
   "litematicafilter.screen.button.apply_hud": "Применить к HUD",
   "litematicafilter.screen.button.apply_render": "Применить к Рендеру",
   "litematicafilter.screen.button.clear": "✕ Сбросить фильтр",
@@ -16,18 +18,27 @@
   "litematicafilter.screen.button.rawhud.off": "§cИсходный HUD: OFF",
   "litematicafilter.screen.button.expand_all": "§aРаскрыть все",
   "litematicafilter.screen.button.collapse_all": "§cСкрыть все",
+  "litematicafilter.screen.button.open": "Открыть Фильтр",
+  "litematicafilter.screen.button.materialhud.on": "§aМатериал HUD: ON",
+  "litematicafilter.screen.button.materialhud.off": "§cМатериал HUD: OFF",
+
   "litematicafilter.screen.empty.rawhud": "Нет исходных материалов для отображения.",
-  "litematicafilter.screen.hint.rawhud": "§dПоказаны разложенные исходные материалы",
+  "litematicafilter.screen.empty.nodata": "Нет данных. Загрузи схему.",
+  "litematicafilter.screen.empty.noresults": "Ничего не найдено по запросу \"%1$s\"",
+
+  "litematicafilter.screen.hint.rawhud": "Показаны разложенные исходные материалы",
   "litematicafilter.screen.counter.rawhud": "Исходные материалы: %s",
-  "litematicafilter.mode.whitelist": "Белый список",
-  "litematicafilter.mode.blacklist": "Черный список",
+
   "litematicafilter.screen.status.counts": "§aИнфо HUD: %s §7| §9Рендер: %s",
-  "litematicafilter.screen.counter": "Показано: §f%1$s§7 / §f%2$s",
-  "litematicafilter.screen.hint.controls": "§7ЛКМ = Выбрать для Инфо HUD  |  ПКМ = Выбрать для Рендера",
-  "litematicafilter.screen.empty.nodata": "§cНет данных. Загрузи схему.",
-  "litematicafilter.screen.empty.noresults": "§7Ничего не найдено по запросу \"§f%1$s§7\"",
+  "litematicafilter.screen.counter": "Показано: %1$s / %2$s",
+  "litematicafilter.screen.hint.controls": "ЛКМ = Выбрать для Инфо HUD  |  ПКМ = Выбрать для Рендера",
+
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Фильтрация материалов в информационной панеле по поиску и выбору из списка",
   "modmenu.descriptionTranslation.litematicafilter": "Позволяет фильтровать список материалов по поиску и выбору, дальше выводить в Панель информации только нужные блоки — без ручного нажатия «Игнорировать» на каждый лишний материал.",
-  "litematicafilter.screen.button.open": "Открыть Фильтр"
+
+  "litematicafilter.mode.whitelist": "Белый список",
+  "litematicafilter.mode.blacklist": "Черный список",
+
+  "litematicafilter.hud.material.title": "§bМатериал HUD"
 }
