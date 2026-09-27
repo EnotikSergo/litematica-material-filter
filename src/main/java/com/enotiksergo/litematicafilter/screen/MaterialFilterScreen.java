@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MaterialFilterScreen extends Screen {
     private static final int TITLE_Y = 8;
@@ -66,6 +67,8 @@ public class MaterialFilterScreen extends Screen {
     private final FilterConfig config;
 
     private List<MatRow> infoHudRows = new ArrayList<>();
+    private List<MatRow> filteredInfoHudRows = new ArrayList<>();
+
     private EditBox searchField;
     private Button btnToggleEnabled, btnToggleMode, btnToggleEntities, btnToggleRawHud, btnToggleMaterialHud;
     private Button btnApplyHud, btnApplyRender;
@@ -76,6 +79,7 @@ public class MaterialFilterScreen extends Screen {
     private List<MaterialListEntry> filteredEntries = new ArrayList<>();
     private boolean isDraggingScrollbar = false;
     private Map<String, Integer> inventoryCache = new HashMap<>();
+    private Map<String, Integer> placedCache = new HashMap<>();
     private long lastInventoryUpdate = 0;
 
     public MaterialFilterScreen(Screen parent) {
@@ -95,15 +99,32 @@ public class MaterialFilterScreen extends Screen {
 
         int ctrlBtnWidth = (listWidth - 15) / 5;
         int ctrlY = CONTROLS_Y;
+
         btnToggleEnabled = Button.builder(getToggleText(), _ -> { config.toggleEnabled(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEnabled);
-        btnToggleMode = Button.builder(getModeText(), _ -> { config.setMode(config.getMode().next()); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + ctrlBtnWidth + 5, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleMode = Button.builder(getModeText(), _ -> { config.setMode(config.getMode().next()); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + ctrlBtnWidth + 4, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleMode);
-        btnToggleEntities = Button.builder(getEntityText(), _ -> { config.toggleShowEntities(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + (ctrlBtnWidth + 5) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleEntities = Button.builder(getEntityText(), _ -> { config.toggleShowEntities(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + (ctrlBtnWidth + 4) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEntities);
-        btnToggleRawHud = Button.builder(getRawHudText(), _ -> { config.toggleShowRawHud(); updateControlButtons(); if (config.isShowRawHud()) rebuildTreeAndRows(); scrollOffset = 0; }).bounds(listX + (ctrlBtnWidth + 5) * 3, ctrlY, ctrlBtnWidth, BTN_H).build();
+
+        btnToggleRawHud = Button.builder(getRawHudText(), _ -> {
+            config.toggleShowRawHud();
+            if (config.isShowRawHud()) {
+                config.setShowMaterialHud(false);
+                rebuildTreeAndRows();
+            }
+            updateControlButtons();
+            scrollOffset = 0;
+        }).bounds(listX + (ctrlBtnWidth + 4) * 3, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleRawHud);
-        btnToggleMaterialHud = Button.builder(getMaterialHudText(), _ -> { config.toggleShowMaterialHud(); updateControlButtons(); }).bounds(listX + (ctrlBtnWidth + 4) * 4, ctrlY, ctrlBtnWidth, BTN_H).build();
+
+        btnToggleMaterialHud = Button.builder(getMaterialHudText(), _ -> {
+            config.toggleShowMaterialHud();
+            if (config.isShowMaterialHud()) {
+                config.setShowRawHud(false);
+            }
+            updateControlButtons();
+        }).bounds(listX + (ctrlBtnWidth + 4) * 4, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleMaterialHud);
 
         int searchW = listWidth - 227;
@@ -115,12 +136,10 @@ public class MaterialFilterScreen extends Screen {
 
         int btn1X = listX + searchW + 5;
         int btn2X = btn1X + 105;
-
         btnApplyHud = Button.builder(Component.translatable("litematicafilter.screen.button.apply_hud"), _ -> applyToHud()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
         this.addRenderableWidget(btnApplyHud);
         btnApplyRender = Button.builder(Component.translatable("litematicafilter.screen.button.apply_render"), _ -> applyToRender()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
         this.addRenderableWidget(btnApplyRender);
-
         btnExpandAll = Button.builder(Component.translatable("litematicafilter.screen.button.expand_all"), _ -> expandAllMaterials()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
         this.addRenderableWidget(btnExpandAll);
         btnCollapseAll = Button.builder(Component.translatable("litematicafilter.screen.button.collapse_all"), _ -> collapseAllMaterials()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
@@ -132,7 +151,6 @@ public class MaterialFilterScreen extends Screen {
 
         int listEndY = this.height - BOTTOM_BAR_H - 6;
         this.visibleEntries = Math.max(1, (listEndY - LIST_START_Y) / ENTRY_H);
-
         updateControlButtons();
         updateFilteredList(searchField.getValue());
         if (config.isShowRawHud()) rebuildTreeAndRows();
@@ -151,7 +169,6 @@ public class MaterialFilterScreen extends Screen {
             } catch (Exception e) { LitematicaFilterMod.LOGGER.warn("Failed to auto-generate material list", e); }
         }
         if (matList == null) return;
-
         if (matList.getMaterialsAll().isEmpty()) {
             matList.reCreateMaterialList();
             MaterialListBase finalMatList = matList;
@@ -168,14 +185,15 @@ public class MaterialFilterScreen extends Screen {
 
     private void rebuildTreeAndRows() {
         MaterialListBase matList = DataManager.getMaterialList();
-        if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); return; }
+        if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); filteredInfoHudRows.clear(); return; }
         try {
             TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getMaterialTargets());
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
             infoHudRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
-        } catch (Exception e) { infoHudRows.clear(); }
+            updateFilteredList(searchField != null ? searchField.getValue() : "");
+        } catch (Exception e) { infoHudRows.clear(); filteredInfoHudRows.clear(); }
     }
 
     private void expandAllMaterials() {
@@ -210,23 +228,31 @@ public class MaterialFilterScreen extends Screen {
 
     private void updateFilteredList(String query) {
         String q = query.toLowerCase(Locale.ROOT).trim();
-        List<MaterialListEntry> base = q.isEmpty() ? new ArrayList<>(allEntries) : allEntries.stream()
-                .filter(e -> matchesQuery(e, q))
-                .toList();
-
-        filteredEntries = new ArrayList<>(base);
-        filteredEntries.sort((a, b) -> {
-            String idA = getBlockId(a.getStack());
-            String idB = getBlockId(b.getStack());
-            boolean aPri = selectedMaterialIds.contains(idA) || selectedRenderIds.contains(idA);
-            boolean bPri = selectedMaterialIds.contains(idB) || selectedRenderIds.contains(idB);
-            if (aPri != bPri) return aPri ? -1 : 1;
-
-            long totalA = 0, totalB = 0;
-            try { totalA = a.getCountTotal(); } catch (Exception ignored) {}
-            try { totalB = b.getCountTotal(); } catch (Exception ignored) {}
-            return Long.compare(totalB, totalA);
-        });
+        if (config.isShowRawHud()) {
+            if (q.isEmpty()) {
+                filteredInfoHudRows = new ArrayList<>(infoHudRows);
+            } else {
+                filteredInfoHudRows = infoHudRows.stream()
+                        .filter(r -> r.itemId.toLowerCase(Locale.ROOT).contains(q) || r.displayName.toLowerCase(Locale.ROOT).contains(q))
+                        .collect(Collectors.toList());
+            }
+        } else {
+            List<MaterialListEntry> base = q.isEmpty() ? new ArrayList<>(allEntries) : allEntries.stream()
+                    .filter(e -> matchesQuery(e, q))
+                    .toList();
+            filteredEntries = new ArrayList<>(base);
+            filteredEntries.sort((a, b) -> {
+                String idA = getBlockId(a.getStack());
+                String idB = getBlockId(b.getStack());
+                boolean aPri = selectedMaterialIds.contains(idA) || selectedRenderIds.contains(idA);
+                boolean bPri = selectedMaterialIds.contains(idB) || selectedRenderIds.contains(idB);
+                if (aPri != bPri) return aPri ? -1 : 1;
+                long totalA = 0, totalB = 0;
+                try { totalA = a.getCountTotal(); } catch (Exception ignored) {}
+                try { totalB = b.getCountTotal(); } catch (Exception ignored) {}
+                return Long.compare(totalB, totalA);
+            });
+        }
     }
 
     private boolean matchesQuery(MaterialListEntry entry, String query) {
@@ -252,12 +278,11 @@ public class MaterialFilterScreen extends Screen {
             String blockId = getBlockId(entry.getStack());
             if (!blockId.isEmpty() && !config.shouldShowInMaterial(blockId)) matList.ignoreEntry(entry);
         }
-
         if (!config.isShowMaterialHud()) {
             config.setShowMaterialHud(true);
+            if (config.isShowRawHud()) config.setShowRawHud(false);
         }
         MaterialHudRenderer.invalidateCache();
-
         if (config.isShowRawHud()) { rebuildTreeAndRows(); RawHudRenderer.invalidateCache(); }
     }
 
@@ -282,10 +307,8 @@ public class MaterialFilterScreen extends Screen {
         MaterialFilterManager.getInstance().clearFilter();
         selectedRenderIds.clear(); selectedMaterialIds.clear();
         searchField.setValue(""); updateFilteredList("");
-
         RawHudRenderer.clearHiddenItems();
         MaterialHudRenderer.clearHiddenItems();
-
         if (config.isShowRawHud()) rebuildTreeAndRows();
         SchematicRenderRefresher.refreshSchematicRendering();
         RawHudRenderer.invalidateCache();
@@ -306,7 +329,6 @@ public class MaterialFilterScreen extends Screen {
         btnToggleEntities.setMessage(getEntityText());
         btnToggleRawHud.setMessage(getRawHudText());
         btnToggleMaterialHud.setMessage(getMaterialHudText());
-
         boolean isRawHud = config.isShowRawHud();
         btnApplyHud.visible = !isRawHud;
         btnApplyRender.visible = !isRawHud;
@@ -323,35 +345,19 @@ public class MaterialFilterScreen extends Screen {
         ctx.centeredText(font, Component.translatable("litematicafilter.screen.status.counts", selectedMaterialIds.size(), selectedRenderIds.size()), this.width / 2, STATUS_Y, COL_TEXT_FILTER);
         ctx.centeredText(font, Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.hint.rawhud" : "litematicafilter.screen.hint.controls"), this.width / 2, HINT_Y, config.isShowRawHud() ? COL_TEXT_INFO : COL_TEXT_DIM);
 
+        int currentRawHudSize = filteredInfoHudRows.size();
         ctx.text(font, Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.counter.rawhud" : "litematicafilter.screen.counter",
-                config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size(),
+                config.isShowRawHud() ? currentRawHudSize : filteredEntries.size(),
                 config.isShowRawHud() ? 0 : allEntries.size()), listX, LIST_START_Y - 6, config.isShowRawHud() ? COL_TEXT_INFO : COL_TEXT_DIM);
 
         ctx.fill(listX, LIST_START_Y + 4, listX + listWidth, LIST_START_Y + 5, COL_SEPARATOR);
         int listEndY = this.height - BOTTOM_BAR_H + 6;
-
         if (config.isShowRawHud()) renderRawHudList(ctx, mx, my, listEndY);
         else renderList(ctx, mx, my, listEndY);
 
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? currentRawHudSize : filteredEntries.size();
         if (totalItems > visibleEntries) renderScrollbar(ctx, listX + listWidth + 3, listEndY, totalItems);
-
         super.extractRenderState(ctx, mx, my, delta);
-
-        if (allEntries.isEmpty()) {
-            ctx.centeredText(font,
-                    Component.translatable("litematicafilter.screen.empty.nodata"),
-                    this.width / 2, this.height / 2, 0xFFFF5555);
-        } else if (!config.isShowRawHud() && filteredEntries.isEmpty()) {
-            ctx.centeredText(font,
-                    Component.translatable("litematicafilter.screen.empty.noresults",
-                            searchField.getValue()),
-                    this.width / 2, this.height / 2, COL_TEXT_DIM);
-        } else if (config.isShowRawHud() && infoHudRows.isEmpty()) {
-            ctx.centeredText(font,
-                    Component.translatable("litematicafilter.screen.empty.rawhud"),
-                    this.width / 2, this.height / 2, COL_TEXT_INFO);
-        }
     }
 
     private void renderList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
@@ -368,7 +374,6 @@ public class MaterialFilterScreen extends Screen {
         ItemStack stack; String blockId, displayName;
         try { stack = entry.getStack(); blockId = getBlockId(stack); displayName = stack.getHoverName().getString(); } catch (Exception e) { return; }
         if (blockId.isEmpty()) return;
-
         boolean inRender = selectedRenderIds.contains(blockId), inMaterial = selectedMaterialIds.contains(blockId);
         boolean hovered = mx >= x && mx < x + listWidth && my >= y && my < y + ENTRY_H;
         int bg = hovered ? ((inRender && inMaterial) ? COL_ENTRY_HOVER_BOTH : inRender ? COL_ENTRY_HOVER_RENDER : inMaterial ? COL_ENTRY_HOVER_MATERIAL : COL_ENTRY_HOVER) : (inRender && inMaterial) ? COL_ENTRY_BOTH : (inRender ? COL_ENTRY_RENDER : inMaterial ? COL_ENTRY_MATERIAL : COL_ENTRY_NORMAL);
@@ -376,20 +381,18 @@ public class MaterialFilterScreen extends Screen {
         ctx.fill(x, y, x + listWidth, y + ENTRY_H - 1, bg);
         if (mark != 0) ctx.fill(x, y, x + 3, y + ENTRY_H - 1, mark);
         ctx.item(stack, x + 3, y + 3);
-
         String nameStr = font.width(displayName) > listWidth - 80 ? font.plainSubstrByWidth(displayName, listWidth - 86) + "…" : displayName;
         ctx.text(font, Component.literal(nameStr), x + 23, y + 7, COL_TEXT_MAIN);
-
         try {
             long total = entry.getCountTotal();
-
             long now = System.currentTimeMillis();
             if (now - lastInventoryUpdate > 1000) {
                 inventoryCache = CraftTreeAdapter.getInventoryCounts();
+                placedCache = CraftTreeAdapter.getPlacedBlockCounts();
                 lastInventoryUpdate = now;
             }
-            long avail = inventoryCache.getOrDefault(blockId.toLowerCase().trim(), 0);
-
+            String idLower = blockId.toLowerCase().trim();
+            long avail = inventoryCache.getOrDefault(idLower, 0) + placedCache.getOrDefault(idLower, 0);
             if (total > 0) {
                 String cnt = avail + " / " + total;
                 ctx.text(font, Component.literal(cnt), x + listWidth - font.width(cnt) - 2, y + 7, (avail >= total) ? COL_COUNT_OK : COL_COUNT_MISS);
@@ -400,10 +403,10 @@ public class MaterialFilterScreen extends Screen {
     private void renderRawHudList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
         for (int i = 0; i < visibleEntries; i++) {
             int idx = i + scrollOffset;
-            if (idx >= infoHudRows.size()) break;
+            if (idx >= filteredInfoHudRows.size()) break;
             int ey = LIST_START_Y + 7 + i * ENTRY_H;
             if (ey + ENTRY_H > endY) break;
-            renderRawHudEntry(ctx, infoHudRows.get(idx), listX, ey, mx, my);
+            renderRawHudEntry(ctx, filteredInfoHudRows.get(idx), listX, ey, mx, my);
         }
     }
 
@@ -431,7 +434,7 @@ public class MaterialFilterScreen extends Screen {
     }
 
     @Override public boolean mouseScrolled(double mx, double my, double hScroll, double vScroll) {
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         scrollOffset = Math.max(0, Math.min(Math.max(0, totalItems - visibleEntries), scrollOffset - (int) vScroll));
         return true;
     }
@@ -441,8 +444,7 @@ public class MaterialFilterScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         double mouseX = click.x(), mouseY = click.y();
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
-
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         if (totalItems > visibleEntries) {
             int listEndY = this.height - BOTTOM_BAR_H + 6;
             int scrollX = listX + listWidth + 3, trackH = listEndY - LIST_START_Y;
@@ -453,13 +455,13 @@ public class MaterialFilterScreen extends Screen {
                 isDraggingScrollbar = true; return true;
             }
         }
-
         if (config.isShowRawHud()) {
             if (click.button() == 0 && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
                 int clickedRow = (int) ((mouseY - LIST_START_Y - 10) / ENTRY_H);
                 int entryIndex = scrollOffset + clickedRow;
-                if (entryIndex >= 0 && entryIndex < infoHudRows.size()) {
-                    MatRow row = infoHudRows.get(entryIndex);
+
+                if (entryIndex >= 0 && entryIndex < filteredInfoHudRows.size()) {
+                    MatRow row = filteredInfoHudRows.get(entryIndex);
                     if (row.hasRecipe) {
                         config.toggleExpanded(row.itemId);
                         rebuildTreeAndRows();
@@ -470,7 +472,6 @@ public class MaterialFilterScreen extends Screen {
             }
             return super.mouseClicked(click, doubled);
         }
-
         int button = click.button();
         if ((button == 0 || button == 1) && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
             int clickedRow = (int) ((mouseY - LIST_START_Y - 10) / ENTRY_H);
@@ -480,7 +481,6 @@ public class MaterialFilterScreen extends Screen {
                 if (!blockId.isEmpty()) {
                     Set<String> targetSet = (button == 0) ? selectedMaterialIds : selectedRenderIds;
                     if (targetSet.contains(blockId)) targetSet.remove(blockId); else targetSet.add(blockId);
-
                     updateFilteredList(searchField.getValue());
                 }
                 return true;
@@ -492,7 +492,7 @@ public class MaterialFilterScreen extends Screen {
     @Override public boolean mouseDragged(@NotNull MouseButtonEvent click, double offsetX, double offsetY) {
         boolean handled = super.mouseDragged(click, offsetX, offsetY);
         if (!isDraggingScrollbar) return handled;
-        int totalItems = config.isShowRawHud() ? infoHudRows.size() : filteredEntries.size();
+        int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         int trackH = (this.height - BOTTOM_BAR_H + 6) - LIST_START_Y;
         int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
         float ratio = (float) (click.y() - LIST_START_Y - (thumbH / 2.0)) / (trackH - thumbH);

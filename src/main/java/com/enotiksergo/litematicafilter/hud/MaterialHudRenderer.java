@@ -7,6 +7,7 @@ import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -41,10 +42,27 @@ public class MaterialHudRenderer {
         int screenHeight = mc.getWindow().getGuiScaledHeight();
 
         int lineHeight = 12, padding = 2, iconSize = 16;
-        int nameMaxWidth = 120, countWidth = 100;
 
-        int rawWidth = padding + iconSize + 4 + nameMaxWidth + 4 + countWidth + padding;
-        int rawHeight = linesToRender * lineHeight + padding * 2;
+        int maxNameWidth = 0;
+        int maxCountWidth = 0;
+        for (int i = 0; i < linesToRender; i++) {
+            MaterialRow row = cachedRows.get(i);
+            int nameW = mc.font.width(row.displayName);
+            if (nameW > maxNameWidth) maxNameWidth = nameW;
+
+            String countStr = CraftTreeAdapter.formatCountForHud(row.missing);
+            int countW = mc.font.width(countStr);
+            if (countW > maxCountWidth) maxCountWidth = countW;
+        }
+
+        Component titleComponent = Component.translatable("litematicafilter.screen.material_hud.title")
+                .withStyle(ChatFormatting.BOLD);
+        int titleWidth = mc.font.width(titleComponent);
+        int contentWidth = Math.max(maxNameWidth, titleWidth);
+
+        int rawWidth = padding + iconSize + 4 + contentWidth + 8 + maxCountWidth + padding;
+        int titleHeight = mc.font.lineHeight + 4;
+        int rawHeight = titleHeight + linesToRender * lineHeight + padding * 2;
 
         int sWidth = (int) (rawWidth * scale);
         int sHeight = (int) (rawHeight * scale);
@@ -63,16 +81,15 @@ public class MaterialHudRenderer {
         pose.translate((float) baseX, (float) baseY);
         pose.scale(scale, scale);
 
+        ctx.text(mc.font, titleComponent, padding, padding, 0xFFFFFFFF);
+
         for (int i = 0; i < linesToRender; i++) {
             MaterialRow row = cachedRows.get(i);
-            int currentY = padding + i * lineHeight;
+            int currentY = padding + titleHeight + i * lineHeight;
 
             ctx.item(row.stack, padding, currentY - 2);
 
             String name = row.displayName;
-            if (mc.font.width(name) > nameMaxWidth) {
-                name = mc.font.plainSubstrByWidth(name, nameMaxWidth - 6) + "...";
-            }
             int textX = padding + iconSize + 4;
             ctx.text(mc.font, Component.literal(name), textX, currentY, 0xFFFFFFFF);
 
@@ -98,7 +115,9 @@ public class MaterialHudRenderer {
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
-            Map<String, Integer> invCounts = getInventoryCounts();
+
+            Map<String, Integer> invCounts = CraftTreeAdapter.getInventoryCounts();
+            Map<String, Integer> placedCounts = CraftTreeAdapter.getPlacedBlockCounts();
 
             List<MaterialRow> rows = new ArrayList<>();
             for (MaterialListEntry entry : matList.getMaterialsAll()) {
@@ -109,7 +128,8 @@ public class MaterialHudRenderer {
 
                 long total = 0;
                 try { total = entry.getCountTotal(); } catch (Exception ignored) {}
-                long available = invCounts.getOrDefault(blockId, 0);
+
+                long available = invCounts.getOrDefault(blockId, 0) + placedCounts.getOrDefault(blockId, 0);
                 long missing = Math.max(0, total - available);
 
                 if (missing <= 0) {
@@ -131,21 +151,6 @@ public class MaterialHudRenderer {
         } catch (Exception e) {
             cachedRows = List.of();
         }
-    }
-
-    private static Map<String, Integer> getInventoryCounts() {
-        Map<String, Integer> counts = new HashMap<>();
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return counts;
-        Inventory inv = mc.player.getInventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            ItemStack stack = inv.getItem(i);
-            if (!stack.isEmpty()) {
-                String id = CraftTreeAdapter.getItemId(stack).toLowerCase().trim();
-                if (!id.isEmpty()) counts.merge(id, stack.getCount(), Integer::sum);
-            }
-        }
-        return counts;
     }
 
     private static MaterialListBase getOrInitMaterialList() {

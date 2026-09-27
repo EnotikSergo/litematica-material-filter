@@ -9,8 +9,8 @@
   "litematicafilter.screen.button.apply_render": "Apply Render",
   "litematicafilter.screen.button.clear": "✕ Clear Filter",
   "litematicafilter.screen.button.close": "Close",
-  "litematicafilter.screen.button.filter.on": "§aFilter: ON",
-  "litematicafilter.screen.button.filter.off": "§cFilter: OFF",
+  "litematicafilter.screen.button.filter.on": "§aRender Filter: ON",
+  "litematicafilter.screen.button.filter.off": "§cRender Filter: OFF",
   "litematicafilter.screen.button.mode": "Mode: §e%s",
   "litematicafilter.screen.button.entities.on": "§aEntities: ON",
   "litematicafilter.screen.button.entities.off": "§cEntities: OFF",
@@ -28,6 +28,9 @@
 
   "litematicafilter.screen.hint.rawhud": "Showing decomposed raw materials",
   "litematicafilter.screen.counter.rawhud": "Raw materials: %s",
+
+  "litematicafilter.screen.material_hud.title": " Material List",
+  "litematicafilter.screen.raw_hud.title": " Raw Material List",
 
   "litematicafilter.screen.status.counts": "§aInfo HUD: %s §7| §9Render: %s",
   "litematicafilter.screen.counter": "Shown: %1$s / %2$s",

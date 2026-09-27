@@ -8,6 +8,7 @@ import com.enotiksergo.litematicafilter.materials.TreeNode;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -43,10 +44,31 @@ public class RawHudRenderer {
         int screenHeight = mc.getWindow().getGuiScaledHeight();
 
         int lineHeight = 12, padding = 2, iconSize = 16;
-        int nameMaxWidth = 120, countWidth = 100;
 
-        int rawWidth = padding + iconSize + 4 + nameMaxWidth + 4 + countWidth + padding;
-        int rawHeight = linesToRender * lineHeight + padding * 2;
+        int maxNameWidth = 0;
+        int maxCountWidth = 0;
+        for (int i = 0; i < linesToRender; i++) {
+            MatRow row = cachedRows.get(i);
+            String name = row.displayName;
+            if (row.hasRecipe) {
+                name = (row.isExpanded ? "[-] " : "[+] ") + name;
+            }
+            int nameW = mc.font.width(name);
+            if (nameW > maxNameWidth) maxNameWidth = nameW;
+
+            String countStr = CraftTreeAdapter.formatCountForHud(row.missing);
+            int countW = mc.font.width(countStr);
+            if (countW > maxCountWidth) maxCountWidth = countW;
+        }
+
+        Component titleComponent = Component.translatable("litematicafilter.screen.raw_hud.title")
+                .withStyle(ChatFormatting.BOLD);
+        int titleWidth = mc.font.width(titleComponent);
+        int contentWidth = Math.max(maxNameWidth, titleWidth);
+
+        int rawWidth = padding + iconSize + 4 + contentWidth + 8 + maxCountWidth + padding;
+        int titleHeight = mc.font.lineHeight + 4;
+        int rawHeight = titleHeight + linesToRender * lineHeight + padding * 2;
 
         int sWidth = (int) (rawWidth * scale);
         int sHeight = (int) (rawHeight * scale);
@@ -65,9 +87,11 @@ public class RawHudRenderer {
         pose.translate((float) baseX, (float) baseY);
         pose.scale(scale, scale);
 
+        ctx.text(mc.font, titleComponent, padding, padding, 0xFFFFFFFF);
+
         for (int i = 0; i < linesToRender; i++) {
             MatRow row = cachedRows.get(i);
-            int currentY = padding + i * lineHeight;
+            int currentY = padding + titleHeight + i * lineHeight;
 
             ctx.item(row.stack, padding, currentY - 2);
 
@@ -75,16 +99,11 @@ public class RawHudRenderer {
             if (row.hasRecipe) {
                 name = (row.isExpanded ? "§a[-] §r" : "§e[+] §r") + name;
             }
-
-            if (mc.font.width(name) > nameMaxWidth) {
-                name = mc.font.plainSubstrByWidth(name, nameMaxWidth - 6) + "...";
-            }
             int textX = padding + iconSize + 4;
             ctx.text(mc.font, Component.literal(name), textX, currentY, 0xFFFFFFFF);
 
             String countStr = CraftTreeAdapter.formatCountForHud(row.missing);
             int countColor = 0xFFFFAA00;
-
             int countX = rawWidth - padding - mc.font.width(countStr);
             ctx.text(mc.font, Component.literal(countStr), countX, currentY, countColor);
         }
@@ -104,7 +123,6 @@ public class RawHudRenderer {
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
-
             List<MatRow> allRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
             List<MatRow> visibleRows = new ArrayList<>();
             for (MatRow row : allRows) {
