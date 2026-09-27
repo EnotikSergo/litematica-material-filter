@@ -8,8 +8,8 @@
     "ChunkCacheSchematicMixin",
     "ChunkRendererSchematicVboMixin",
     "SchematicOverlayMixin",
-    "SchematicWorldMixin",
-    "WorldRendererSchematicMixin"
+    "WorldRendererSchematicMixin",
+    "RayTraceUtilsMixin"
   ],
   "injectors": {
     "defaultRequire": 0
