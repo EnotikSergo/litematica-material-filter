@@ -10,10 +10,13 @@ import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -182,11 +185,33 @@ public class CraftTreeAdapter {
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
             if (!stack.isEmpty()) {
-                String id = getItemId(stack).toLowerCase().trim();
-                if (!id.isEmpty()) counts.merge(id, stack.getCount(), Integer::sum);
+                countStackAndContents(stack, counts);
             }
         }
         return counts;
+    }
+
+    private static void countStackAndContents(ItemStack stack, Map<String, Integer> counts) {
+        if (stack.isEmpty()) return;
+
+        String id = getItemId(stack).toLowerCase().trim();
+        if (!id.isEmpty()) {
+            counts.merge(id, stack.getCount(), Integer::sum);
+        }
+
+        try {
+            ItemContainerContents container = stack.get(DataComponents.CONTAINER);
+            if (container != null) {
+                container.nonEmptyItemCopyStream().forEach(inner -> countStackAndContents(inner, counts));
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
+            if (bundle != null) {
+                bundle.itemCopyStream().forEach(inner -> countStackAndContents(inner, counts));
+            }
+        } catch (Exception ignored) {}
     }
 
     public static Map<String, Integer> getPlacedBlockCounts() {
