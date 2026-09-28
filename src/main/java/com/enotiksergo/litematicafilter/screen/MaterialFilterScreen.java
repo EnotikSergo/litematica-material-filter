@@ -112,6 +112,8 @@ public class MaterialFilterScreen extends Screen {
             if (config.isShowRawHud()) {
                 config.setShowMaterialHud(false);
                 rebuildTreeAndRows();
+            } else {
+                updateFilteredList(searchField.getValue());
             }
             updateControlButtons();
             scrollOffset = 0;
@@ -138,7 +140,7 @@ public class MaterialFilterScreen extends Screen {
         int btn2X = btn1X + 105;
         btnApplyHud = Button.builder(Component.translatable("litematicafilter.screen.button.apply_hud"), _ -> applyToHud()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
         this.addRenderableWidget(btnApplyHud);
-        btnApplyRender = Button.builder(Component.translatable("litematicafilter.screen.button.apply_render"), _ -> applyToRender()).bounds(btn2X, SEARCH_Y, 117, BTN_H).build();
+        btnApplyRender = Button.builder(Component.translatable("litematicafilter.screen.button.apply_render"), _ -> applyToRender()).bounds(btn2X, SEARCH_Y, 118, BTN_H).build();
         this.addRenderableWidget(btnApplyRender);
         btnExpandAll = Button.builder(Component.translatable("litematicafilter.screen.button.expand_all"), _ -> expandAllMaterials()).bounds(btn1X, SEARCH_Y, 100, BTN_H).build();
         this.addRenderableWidget(btnExpandAll);
@@ -342,7 +344,6 @@ public class MaterialFilterScreen extends Screen {
         renderBackground(ctx);
         ctx.fill(listX - 6, 2, listX + listWidth + 6, this.height - 2, COL_MATERIAL_BG);
         ctx.centeredText(font, Component.translatable("litematicafilter.screen.title").withStyle(net.minecraft.ChatFormatting.BOLD), this.width / 2, TITLE_Y, COL_TEXT_MAIN);
-        ctx.centeredText(font, Component.translatable("litematicafilter.screen.status.counts", selectedMaterialIds.size(), selectedRenderIds.size()), this.width / 2, STATUS_Y, COL_TEXT_FILTER);
         ctx.centeredText(font, Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.hint.rawhud" : "litematicafilter.screen.hint.controls"), this.width / 2, HINT_Y, config.isShowRawHud() ? COL_TEXT_INFO : COL_TEXT_DIM);
 
         int currentRawHudSize = filteredInfoHudRows.size();
@@ -358,6 +359,22 @@ public class MaterialFilterScreen extends Screen {
         int totalItems = config.isShowRawHud() ? currentRawHudSize : filteredEntries.size();
         if (totalItems > visibleEntries) renderScrollbar(ctx, listX + listWidth + 3, listEndY, totalItems);
         super.extractRenderState(ctx, mx, my, delta);
+
+        if (allEntries.isEmpty()) {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.nodata"),
+                    this.width / 2, this.height / 2, 0xFFFF2528);
+        } else if (filteredEntries.isEmpty()) {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.noresults",
+                            searchField.getValue()),
+                    this.width / 2, this.height / 2, COL_TEXT_DIM);
+        } else if (config.isShowRawHud() && filteredInfoHudRows.isEmpty()) {
+            ctx.centeredText(font,
+                    Component.translatable("litematicafilter.screen.empty.noresults",
+                            searchField.getValue()),
+                    this.width / 2, this.height / 2, COL_TEXT_INFO);
+        }
     }
 
     private void renderList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {

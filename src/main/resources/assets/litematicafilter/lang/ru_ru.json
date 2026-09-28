@@ -9,11 +9,11 @@
   "litematicafilter.screen.button.apply_render": "Применить к Рендеру",
   "litematicafilter.screen.button.clear": "✕ Сбросить фильтр",
   "litematicafilter.screen.button.close": "Закрыть",
-  "litematicafilter.screen.button.filter.on": "§aФильтр рендера: Вкл",
-  "litematicafilter.screen.button.filter.off": "§cФильтр рендера: Выкл",
+  "litematicafilter.screen.button.filter.on": "§aФильтр рендера: ON",
+  "litematicafilter.screen.button.filter.off": "§cФильтр рендера: OFF",
   "litematicafilter.screen.button.mode": "Режим: §e%s",
-  "litematicafilter.screen.button.entities.on": "§aСущности: Вкл",
-  "litematicafilter.screen.button.entities.off": "§cСущности: Выкл",
+  "litematicafilter.screen.button.entities.on": "§aСущности: ON",
+  "litematicafilter.screen.button.entities.off": "§cСущности: OFF",
   "litematicafilter.screen.button.rawhud.on": "§aИсходный HUD: ON",
   "litematicafilter.screen.button.rawhud.off": "§cИсходный HUD: OFF",
   "litematicafilter.screen.button.expand_all": "§aРаскрыть все",
@@ -22,7 +22,6 @@
   "litematicafilter.screen.button.materialhud.on": "§aМатериал HUD: ON",
   "litematicafilter.screen.button.materialhud.off": "§cМатериал HUD: OFF",
 
-  "litematicafilter.screen.empty.rawhud": "Нет исходных материалов для отображения.",
   "litematicafilter.screen.empty.nodata": "Нет данных. Загрузи схему.",
   "litematicafilter.screen.empty.noresults": "Ничего не найдено по запросу \"%1$s\"",
 
@@ -32,9 +31,8 @@
   "litematicafilter.screen.material_hud.title": " Список материалов",
   "litematicafilter.screen.raw_hud.title": " Список исходных материалов",
 
-  "litematicafilter.screen.status.counts": "§aИнфо HUD: %s §7| §9Рендер: %s",
   "litematicafilter.screen.counter": "Показано: %1$s / %2$s",
-  "litematicafilter.screen.hint.controls": "ЛКМ = Выбрать для Инфо HUD  |  ПКМ = Выбрать для Рендера",
+  "litematicafilter.screen.hint.controls": "ЛКМ = Выбрать для Фильтра материалов  |  ПКМ = Выбрать для Фильтра Рендера",
 
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Фильтрация материалов в информационной панеле по поиску и выбору из списка",

@@ -22,7 +22,6 @@
   "litematicafilter.screen.button.materialhud.on": "§aMaterial HUD: ON",
   "litematicafilter.screen.button.materialhud.off": "§cMaterial HUD: OFF",
 
-  "litematicafilter.screen.empty.rawhud": "No raw materials to display.",
   "litematicafilter.screen.empty.nodata": "No data. Load a schematic.",
   "litematicafilter.screen.empty.noresults": "Nothing found for \"%1$s\"",
 
@@ -32,9 +31,8 @@
   "litematicafilter.screen.material_hud.title": " Material List",
   "litematicafilter.screen.raw_hud.title": " Raw Material List",
 
-  "litematicafilter.screen.status.counts": "§aInfo HUD: %s §7| §9Render: %s",
   "litematicafilter.screen.counter": "Shown: %1$s / %2$s",
-  "litematicafilter.screen.hint.controls": "LMB = For Info HUD  |  RMB = For Render",
+  "litematicafilter.screen.hint.controls": "LMB = For Filter Materials  |  RMB = For Filter Render",
 
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Filtering materials in the Info HUD by search query and selecting from the list",

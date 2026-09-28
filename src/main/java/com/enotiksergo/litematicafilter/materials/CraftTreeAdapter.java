@@ -257,7 +257,7 @@ public class CraftTreeAdapter {
         if (total <= 0) return "0";
         long stacks = total / 64;
         long remainder = total % 64;
-        if (stacks > 0) return total + " (" + stacks + "x64+" + remainder + ")";
+        if (stacks > 0) return total + " (" + stacks + " x 64 + " + remainder + ")";
         return String.valueOf(total);
     }
 }
