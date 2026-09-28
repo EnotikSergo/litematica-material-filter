@@ -19,8 +19,8 @@ public class FilterConfig {
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("litematicafilter.json");
     private static FilterConfig INSTANCE;
 
-    private boolean enabled = true;
-    private FilterMode mode = FilterMode.WHITELIST;
+    private boolean enabled = false;
+    private FilterMode mode = FilterMode.BLACKLIST;
     private Set<String> renderTargets = new HashSet<>();
     private Set<String> materialTargets = new HashSet<>();
     private boolean showEntities = true;
