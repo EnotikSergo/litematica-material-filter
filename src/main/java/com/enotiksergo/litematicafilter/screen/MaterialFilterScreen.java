@@ -364,12 +364,12 @@ public class MaterialFilterScreen extends Screen {
             ctx.centeredText(font,
                     Component.translatable("litematicafilter.screen.empty.nodata"),
                     this.width / 2, this.height / 2, 0xFFFF2528);
-        } else if (filteredEntries.isEmpty()) {
+        } else if (!config.isShowRawHud() && filteredEntries.isEmpty()) {
             ctx.centeredText(font,
                     Component.translatable("litematicafilter.screen.empty.noresults",
                             searchField.getValue()),
                     this.width / 2, this.height / 2, COL_TEXT_DIM);
-        } else if (config.isShowRawHud() && filteredInfoHudRows.isEmpty()) {
+        } else if (config.isShowRawHud() && filteredInfoHudRows.isEmpty() && !searchField.getValue().isEmpty()) {
             ctx.centeredText(font,
                     Component.translatable("litematicafilter.screen.empty.noresults",
                             searchField.getValue()),
