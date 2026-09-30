@@ -22,7 +22,7 @@ public class LitematicaFilterClient implements ClientModInitializer {
 
         openGuiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.litematicafilter.open_gui",
-                InputConstants.Type.KEYSYM,
+                InputConstants.Type.KEYBOARD,
                 78,
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath(LitematicaFilterMod.MOD_ID, "main"))
         ));

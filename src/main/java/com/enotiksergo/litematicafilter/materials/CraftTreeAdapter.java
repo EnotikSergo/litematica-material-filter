@@ -209,7 +209,7 @@ public class CraftTreeAdapter {
         try {
             BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
             if (bundle != null) {
-                bundle.itemCopyStream().forEach(inner -> countStackAndContents(inner, counts));
+                bundle.itemCopies().forEach(inner -> countStackAndContents(inner, counts));
             }
         } catch (Exception ignored) {}
     }

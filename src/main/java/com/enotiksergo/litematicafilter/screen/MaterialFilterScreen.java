@@ -473,7 +473,7 @@ public class MaterialFilterScreen extends Screen {
             }
         }
         if (config.isShowRawHud()) {
-            if (click.button() == 0 && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
+            if (click.button() == 1 && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
                 int clickedRow = (int) ((mouseY - LIST_START_Y - 10) / ENTRY_H);
                 int entryIndex = scrollOffset + clickedRow;
 
@@ -490,13 +490,13 @@ public class MaterialFilterScreen extends Screen {
             return super.mouseClicked(click, doubled);
         }
         int button = click.button();
-        if ((button == 0 || button == 1) && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
+        if ((button == 1 || button == 3) && mouseY >= LIST_START_Y && mouseY < this.height - BOTTOM_BAR_H && mouseX >= listX && mouseX <= listX + listWidth) {
             int clickedRow = (int) ((mouseY - LIST_START_Y - 10) / ENTRY_H);
             int entryIndex = scrollOffset + clickedRow;
             if (entryIndex >= 0 && entryIndex < filteredEntries.size()) {
                 String blockId = getBlockId(filteredEntries.get(entryIndex).getStack());
                 if (!blockId.isEmpty()) {
-                    Set<String> targetSet = (button == 0) ? selectedMaterialIds : selectedRenderIds;
+                    Set<String> targetSet = (button == 1) ? selectedMaterialIds : selectedRenderIds;
                     if (targetSet.contains(blockId)) targetSet.remove(blockId); else targetSet.add(blockId);
                     updateFilteredList(searchField.getValue());
                 }
