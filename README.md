@@ -2,7 +2,7 @@
 
 Addon for **Litematica**
 
-Allows filtering the material list by query and displaying only the necessary blocks in the **Info HUD** or in the Schematic Render in the world - without manually clicking "Ignore" on every extra material.
+Allows filtering the material list by query and displaying only the necessary blocks in the **Info HUD** or in the Schematic Placement in the world - without manually clicking "Ignore" on every extra material.
 
 ---
 
