@@ -14,6 +14,11 @@ Allows filtering the material list by query and displaying only the necessary bl
 2. The filter screen will appear:
    - Enter a query, for example, `oak` — the list will immediately show only blocks with "oak" in their name. You can apply the entire list to the filter at once by clicking **`Apply to HUD`** or **`Apply to Placement`**.
    - You can also simply click to select what you need (**`LMB`** selects the filter for the Material List, **`RMB`** selects the filter for placement blocks in the world).
+   
+   <img width="950" height="176" alt="image" src="https://github.com/user-attachments/assets/77db8a12-9884-49ef-a175-11a3d1d5c5a3" />
+
+    - **`Gren`** — hud filter; **`Blue`** — placemet filter; **`Yellow`** — both.
+
    - **`Placement Filter: ON/OFF`** toggles the use of the filter for filtering schematic blocks in the placement.
    - **`Mode: White/Black list`** can work as either a whitelist or a blacklist, placement and material huds.
    - **`Entities`** toggles the display of entities and fluid animations on the schematic.
