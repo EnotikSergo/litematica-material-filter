@@ -21,13 +21,13 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class MaterialFilterScreen extends Screen {
     private static final int TITLE_Y = 8;
-    private static final int STATUS_Y = 20;
-    private static final int HINT_Y = 31;
+    private static final int HINT_Y = 25;
     private static final int CONTROLS_Y = 44;
     private static final int SEARCH_Y = 68;
     private static final int SEARCH_H = 20;
@@ -54,7 +54,6 @@ public class MaterialFilterScreen extends Screen {
     private static final int COL_COUNT_MISS = 0xFFFFAA00;
     private static final int COL_TEXT_MAIN = 0xFFFFFFFF;
     private static final int COL_TEXT_DIM = 0xFFAAAAAA;
-    private static final int COL_TEXT_FILTER = 0xFFFFFFFF;
     private static final int COL_TEXT_INFO = 0xFFDD88FF;
     private static final int COL_SCROLL_TRACK = 0x40FFFFFF;
     private static final int COL_SCROLL_THUMB = 0xAAFFFFFF;
@@ -100,11 +99,27 @@ public class MaterialFilterScreen extends Screen {
         int ctrlBtnWidth = (listWidth - 15) / 5;
         int ctrlY = CONTROLS_Y;
 
-        btnToggleEnabled = Button.builder(getToggleText(), _ -> { config.toggleEnabled(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleEnabled = Button.builder(getToggleText(), _ -> {
+            config.toggleEnabled();
+            updateControlButtons();
+            updateLitematicaMaterialListIgnored();
+            SchematicRenderRefresher.refreshSchematicRendering();
+        }).bounds(listX, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEnabled);
-        btnToggleMode = Button.builder(getModeText(), _ -> { config.setMode(config.getMode().next()); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + ctrlBtnWidth + 4, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleMode = Button.builder(getModeText(), _ -> {
+            config.setMode(config.getMode().next());
+            updateControlButtons();
+            if (config.isShowRawHud()) rebuildTreeAndRows();
+            RawHudRenderer.invalidateCache();
+            MaterialHudRenderer.invalidateCache();
+            SchematicRenderRefresher.refreshSchematicRendering();
+        }).bounds(listX + ctrlBtnWidth + 4, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleMode);
-        btnToggleEntities = Button.builder(getEntityText(), _ -> { config.toggleShowEntities(); updateControlButtons(); SchematicRenderRefresher.refreshSchematicRendering(); }).bounds(listX + (ctrlBtnWidth + 4) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
+        btnToggleEntities = Button.builder(getEntityText(), _ -> {
+            config.toggleShowEntities();
+            updateControlButtons();
+            SchematicRenderRefresher.refreshSchematicRendering();
+        }).bounds(listX + (ctrlBtnWidth + 4) * 2, ctrlY, ctrlBtnWidth, BTN_H).build();
         this.addRenderableWidget(btnToggleEntities);
 
         btnToggleRawHud = Button.builder(getRawHudText(), _ -> {
@@ -168,7 +183,9 @@ public class MaterialFilterScreen extends Screen {
                     matList = placement.getMaterialList();
                     DataManager.setMaterialList(matList);
                 }
-            } catch (Exception e) { LitematicaFilterMod.LOGGER.warn("Failed to auto-generate material list", e); }
+            } catch (Exception e) {
+                LitematicaFilterMod.LOGGER.warn("Failed to auto-generate material list", e);
+            }
         }
         if (matList == null) return;
         if (matList.getMaterialsAll().isEmpty()) {
@@ -187,27 +204,36 @@ public class MaterialFilterScreen extends Screen {
 
     private void rebuildTreeAndRows() {
         MaterialListBase matList = DataManager.getMaterialList();
-        if (matList == null || matList.getMaterialsAll().isEmpty()) { infoHudRows.clear(); filteredInfoHudRows.clear(); return; }
+        if (matList == null || matList.getMaterialsAll().isEmpty()) {
+            infoHudRows.clear();
+            filteredInfoHudRows.clear();
+            return;
+        }
         try {
-            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getMaterialTargets());
+            TreeNode tree = CraftTreeAdapter.buildTree(matList, null);
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
             infoHudRows = CraftTreeAdapter.flattenAndSort(tree, config.getExpandedItems(), priorityIds);
             updateFilteredList(searchField != null ? searchField.getValue() : "");
-        } catch (Exception e) { infoHudRows.clear(); filteredInfoHudRows.clear(); }
+        } catch (Exception e) {
+            infoHudRows.clear();
+            filteredInfoHudRows.clear();
+        }
     }
 
     private void expandAllMaterials() {
         MaterialListBase matList = DataManager.getMaterialList();
         if (matList == null || matList.getMaterialsAll().isEmpty()) return;
         try {
-            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getMaterialTargets());
+            TreeNode tree = CraftTreeAdapter.buildTree(matList, null);
             Set<String> toExpand = new HashSet<>();
             collectAllExpandable(tree, toExpand);
             config.expandAll(toExpand);
             rebuildTreeAndRows();
-        } catch (Exception e) { LitematicaFilterMod.LOGGER.warn("Failed to expand all materials", e); }
+        } catch (Exception e) {
+            LitematicaFilterMod.LOGGER.warn("Failed to expand all materials", e);
+        }
     }
 
     private void collectAllExpandable(TreeNode node, Set<String> ids) {
@@ -221,7 +247,9 @@ public class MaterialFilterScreen extends Screen {
         rebuildTreeAndRows();
     }
 
-    private String getBlockId(ItemStack stack) { return CraftTreeAdapter.getItemId(stack); }
+    private String getBlockId(ItemStack stack) {
+        return CraftTreeAdapter.getItemId(stack);
+    }
 
     private void onSearchChanged(String text) {
         updateFilteredList(text);
@@ -250,8 +278,14 @@ public class MaterialFilterScreen extends Screen {
                 boolean bPri = selectedMaterialIds.contains(idB) || selectedRenderIds.contains(idB);
                 if (aPri != bPri) return aPri ? -1 : 1;
                 long totalA = 0, totalB = 0;
-                try { totalA = a.getCountTotal(); } catch (Exception ignored) {}
-                try { totalB = b.getCountTotal(); } catch (Exception ignored) {}
+                try {
+                    totalA = a.getCountTotal();
+                } catch (Exception ignored) {
+                }
+                try {
+                    totalB = b.getCountTotal();
+                } catch (Exception ignored) {
+                }
                 return Long.compare(totalB, totalA);
             });
         }
@@ -261,7 +295,9 @@ public class MaterialFilterScreen extends Screen {
         try {
             ItemStack stack = entry.getStack();
             return getBlockId(stack).toLowerCase(Locale.ROOT).contains(query) || stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(query);
-        } catch (Exception e) { return false; }
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void applyToHud() {
@@ -271,7 +307,10 @@ public class MaterialFilterScreen extends Screen {
         if (!searchField.getValue().trim().isEmpty()) {
             for (MaterialListEntry entry : filteredEntries) {
                 String blockId = getBlockId(entry.getStack());
-                if (!blockId.isEmpty()) { finalMaterialIds.add(blockId); selectedMaterialIds.add(blockId); }
+                if (!blockId.isEmpty()) {
+                    finalMaterialIds.add(blockId);
+                    selectedMaterialIds.add(blockId);
+                }
             }
         }
         config.setMaterialTargets(finalMaterialIds);
@@ -285,7 +324,10 @@ public class MaterialFilterScreen extends Screen {
             if (config.isShowRawHud()) config.setShowRawHud(false);
         }
         MaterialHudRenderer.invalidateCache();
-        if (config.isShowRawHud()) { rebuildTreeAndRows(); RawHudRenderer.invalidateCache(); }
+        if (config.isShowRawHud()) {
+            rebuildTreeAndRows();
+            RawHudRenderer.invalidateCache();
+        }
     }
 
     private void applyToRender() {
@@ -293,7 +335,10 @@ public class MaterialFilterScreen extends Screen {
         if (!searchField.getValue().trim().isEmpty()) {
             for (MaterialListEntry entry : filteredEntries) {
                 String blockId = getBlockId(entry.getStack());
-                if (!blockId.isEmpty()) { finalRenderIds.add(blockId); selectedRenderIds.add(blockId); }
+                if (!blockId.isEmpty()) {
+                    finalRenderIds.add(blockId);
+                    selectedRenderIds.add(blockId);
+                }
             }
         }
         config.setRenderTargets(finalRenderIds);
@@ -305,10 +350,14 @@ public class MaterialFilterScreen extends Screen {
     private void clearFilter() {
         MaterialListBase matList = DataManager.getMaterialList();
         if (matList != null) matList.clearIgnored();
-        config.clearRenderTargets(); config.clearMaterialTargets(); config.clearExpanded();
+        config.clearRenderTargets();
+        config.clearMaterialTargets();
+        config.clearExpanded();
         MaterialFilterManager.getInstance().clearFilter();
-        selectedRenderIds.clear(); selectedMaterialIds.clear();
-        searchField.setValue(""); updateFilteredList("");
+        selectedRenderIds.clear();
+        selectedMaterialIds.clear();
+        searchField.setValue("");
+        updateFilteredList("");
         RawHudRenderer.clearHiddenItems();
         MaterialHudRenderer.clearHiddenItems();
         if (config.isShowRawHud()) rebuildTreeAndRows();
@@ -317,13 +366,29 @@ public class MaterialFilterScreen extends Screen {
         MaterialHudRenderer.invalidateCache();
     }
 
-    private void closeScreen() { this.minecraft.setScreenAndShow(parent); }
+    private void closeScreen() {
+        this.minecraft.setScreenAndShow(parent);
+    }
 
-    private Component getToggleText() { return Component.translatable(config.isEnabled() ? "litematicafilter.screen.button.filter.on" : "litematicafilter.screen.button.filter.off"); }
-    private Component getModeText() { return Component.translatable("litematicafilter.screen.button.mode", Component.translatable("litematicafilter.mode." + config.getMode().name().toLowerCase())); }
-    private Component getEntityText() { return Component.translatable(config.isShowEntities() ? "litematicafilter.screen.button.entities.on" : "litematicafilter.screen.button.entities.off"); }
-    private Component getRawHudText() { return Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.button.rawhud.on" : "litematicafilter.screen.button.rawhud.off"); }
-    private Component getMaterialHudText() { return Component.translatable(config.isShowMaterialHud() ? "litematicafilter.screen.button.materialhud.on" : "litematicafilter.screen.button.materialhud.off"); }
+    private Component getToggleText() {
+        return Component.translatable(config.isEnabled() ? "litematicafilter.screen.button.filter.on" : "litematicafilter.screen.button.filter.off");
+    }
+
+    private Component getModeText() {
+        return Component.translatable("litematicafilter.screen.button.mode", Component.translatable("litematicafilter.mode." + config.getMode().name().toLowerCase()));
+    }
+
+    private Component getEntityText() {
+        return Component.translatable(config.isShowEntities() ? "litematicafilter.screen.button.entities.on" : "litematicafilter.screen.button.entities.off");
+    }
+
+    private Component getRawHudText() {
+        return Component.translatable(config.isShowRawHud() ? "litematicafilter.screen.button.rawhud.on" : "litematicafilter.screen.button.rawhud.off");
+    }
+
+    private Component getMaterialHudText() {
+        return Component.translatable(config.isShowMaterialHud() ? "litematicafilter.screen.button.materialhud.on" : "litematicafilter.screen.button.materialhud.off");
+    }
 
     private void updateControlButtons() {
         btnToggleEnabled.setMessage(getToggleText());
@@ -338,7 +403,9 @@ public class MaterialFilterScreen extends Screen {
         btnCollapseAll.visible = isRawHud;
     }
 
-    public void renderBackground(GuiGraphicsExtractor ctx) { ctx.fill(0, 0, this.width, this.height, 0xB2000000); }
+    public void renderBackground(GuiGraphicsExtractor ctx) {
+        ctx.fill(0, 0, this.width, this.height, 0xB2000000);
+    }
 
     public void extractRenderState(@NotNull GuiGraphicsExtractor ctx, int mx, int my, float delta) {
         renderBackground(ctx);
@@ -375,6 +442,9 @@ public class MaterialFilterScreen extends Screen {
                             searchField.getValue()),
                     this.width / 2, this.height / 2, COL_TEXT_INFO);
         }
+
+        RawHudRenderer.render(ctx, null);
+        MaterialHudRenderer.render(ctx, null);
     }
 
     private void renderList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
@@ -388,8 +458,15 @@ public class MaterialFilterScreen extends Screen {
     }
 
     private void renderEntry(GuiGraphicsExtractor ctx, MaterialListEntry entry, int x, int y, int mx, int my) {
-        ItemStack stack; String blockId, displayName;
-        try { stack = entry.getStack(); blockId = getBlockId(stack); displayName = stack.getHoverName().getString(); } catch (Exception e) { return; }
+        ItemStack stack;
+        String blockId, displayName;
+        try {
+            stack = entry.getStack();
+            blockId = getBlockId(stack);
+            displayName = stack.getHoverName().getString();
+        } catch (Exception e) {
+            return;
+        }
         if (blockId.isEmpty()) return;
         boolean inRender = selectedRenderIds.contains(blockId), inMaterial = selectedMaterialIds.contains(blockId);
         boolean hovered = mx >= x && mx < x + listWidth && my >= y && my < y + ENTRY_H;
@@ -414,7 +491,8 @@ public class MaterialFilterScreen extends Screen {
                 String cnt = avail + " / " + total;
                 ctx.text(font, Component.literal(cnt), x + listWidth - font.width(cnt) - 2, y + 7, (avail >= total) ? COL_COUNT_OK : COL_COUNT_MISS);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     private void renderRawHudList(GuiGraphicsExtractor ctx, int mx, int my, int endY) {
@@ -441,6 +519,20 @@ public class MaterialFilterScreen extends Screen {
         ctx.text(font, Component.literal(cnt), x + listWidth - font.width(cnt) - 2, y + 7, (row.available >= row.total) ? COL_COUNT_OK : COL_COUNT_MISS);
     }
 
+    private void updateLitematicaMaterialListIgnored() {
+        MaterialListBase matList = DataManager.getMaterialList();
+        if (matList == null) return;
+        matList.clearIgnored();
+        for (MaterialListEntry entry : new ArrayList<>(matList.getMaterialsAll())) {
+            String blockId = getBlockId(entry.getStack());
+            if (!blockId.isEmpty() && !config.shouldShowInMaterial(blockId)) {
+                matList.ignoreEntry(entry);
+            }
+        }
+        MaterialHudRenderer.invalidateCache();
+        RawHudRenderer.invalidateCache();
+    }
+
     private void renderScrollbar(GuiGraphicsExtractor ctx, int x, int endY, int totalItems) {
         int trackH = endY - LIST_START_Y;
         int thumbH = Math.max(16, trackH * visibleEntries / totalItems);
@@ -450,13 +542,17 @@ public class MaterialFilterScreen extends Screen {
         ctx.fill(x, thumbY, x + 4, thumbY + thumbH, COL_SCROLL_THUMB);
     }
 
-    @Override public boolean mouseScrolled(double mx, double my, double hScroll, double vScroll) {
+    @Override
+    public boolean mouseScrolled(double mx, double my, double hScroll, double vScroll) {
         int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
         scrollOffset = Math.max(0, Math.min(Math.max(0, totalItems - visibleEntries), scrollOffset - (int) vScroll));
         return true;
     }
 
-    @Override public boolean isPauseScreen() { return false; }
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
@@ -469,7 +565,8 @@ public class MaterialFilterScreen extends Screen {
             int maxScr = totalItems - visibleEntries;
             int thumbY = LIST_START_Y + (maxScr > 0 ? (int) ((float) scrollOffset / maxScr * (trackH - thumbH)) : 0);
             if (mouseX >= scrollX && mouseX <= scrollX + 4 && mouseY >= thumbY && mouseY <= thumbY + thumbH) {
-                isDraggingScrollbar = true; return true;
+                isDraggingScrollbar = true;
+                return true;
             }
         }
         if (config.isShowRawHud()) {
@@ -496,8 +593,26 @@ public class MaterialFilterScreen extends Screen {
             if (entryIndex >= 0 && entryIndex < filteredEntries.size()) {
                 String blockId = getBlockId(filteredEntries.get(entryIndex).getStack());
                 if (!blockId.isEmpty()) {
-                    Set<String> targetSet = (button == 0) ? selectedMaterialIds : selectedRenderIds;
-                    if (targetSet.contains(blockId)) targetSet.remove(blockId); else targetSet.add(blockId);
+                    if (button == 0) {
+                        if (selectedMaterialIds.contains(blockId)) {
+                            selectedMaterialIds.remove(blockId);
+                        } else {
+                            selectedMaterialIds.add(blockId);
+                        }
+                        config.setMaterialTargets(selectedMaterialIds);
+                        if (config.isShowRawHud()) {
+                            rebuildTreeAndRows();
+                        }
+                    } else {
+                        if (selectedRenderIds.contains(blockId)) {
+                            selectedRenderIds.remove(blockId);
+                        } else {
+                            selectedRenderIds.add(blockId);
+                        }
+                        config.setRenderTargets(selectedRenderIds);
+                        MaterialFilterManager.getInstance().setActiveFilter(searchField.getValue().trim(), selectedRenderIds);
+                        SchematicRenderRefresher.refreshSchematicRendering();
+                    }
                     updateFilteredList(searchField.getValue());
                 }
                 return true;
@@ -506,7 +621,8 @@ public class MaterialFilterScreen extends Screen {
         return super.mouseClicked(click, doubled);
     }
 
-    @Override public boolean mouseDragged(@NotNull MouseButtonEvent click, double offsetX, double offsetY) {
+    @Override
+    public boolean mouseDragged(@NotNull MouseButtonEvent click, double offsetX, double offsetY) {
         boolean handled = super.mouseDragged(click, offsetX, offsetY);
         if (!isDraggingScrollbar) return handled;
         int totalItems = config.isShowRawHud() ? filteredInfoHudRows.size() : filteredEntries.size();
@@ -517,5 +633,9 @@ public class MaterialFilterScreen extends Screen {
         return true;
     }
 
-    @Override public boolean mouseReleased(@NotNull MouseButtonEvent click) { isDraggingScrollbar = false; return super.mouseReleased(click); }
+    @Override
+    public boolean mouseReleased(@NotNull MouseButtonEvent click) {
+        isDraggingScrollbar = false;
+        return super.mouseReleased(click);
+    }
 }

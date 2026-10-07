@@ -12,7 +12,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix3x2fStack;
 
@@ -110,8 +109,6 @@ public class MaterialHudRenderer {
             return;
         }
         try {
-            Set<String> materialTargets = config.getMaterialTargets();
-            boolean filterByMaterial = materialTargets != null && !materialTargets.isEmpty();
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
@@ -124,7 +121,8 @@ public class MaterialHudRenderer {
                 ItemStack stack = entry.getStack();
                 String blockId = CraftTreeAdapter.getItemId(stack).toLowerCase().trim();
                 if (blockId.isEmpty()) continue;
-                if (filterByMaterial && !materialTargets.contains(blockId)) continue;
+
+                if (!config.shouldShowInMaterial(blockId)) continue;
 
                 long total = 0;
                 try { total = entry.getCountTotal(); } catch (Exception ignored) {}

@@ -1,6 +1,7 @@
 package com.enotiksergo.litematicafilter.materials;
 
 import com.enotiksergo.litematicafilter.LitematicaFilterMod;
+import com.enotiksergo.litematicafilter.config.FilterConfig;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListEntry;
@@ -29,10 +30,15 @@ public class CraftTreeAdapter {
     public static TreeNode buildTree(MaterialListBase source, Set<String> panelTargets) {
         TreeNode virtualRoot = new TreeNode(ItemStack.EMPTY, "__virtual_root__", "Virtual Root", 0, false, false);
         boolean filterByPanel = panelTargets != null && !panelTargets.isEmpty();
+        FilterConfig config = FilterConfig.getInstance();
         for (MaterialListEntry entry : source.getMaterialsAll()) {
             ItemStack stack = entry.getStack();
             String rootId = getItemId(stack);
-            if (filterByPanel && !panelTargets.contains(rootId)) continue;
+            if (rootId.isEmpty()) continue;
+
+            if (!config.shouldShowInMaterial(rootId)) continue;
+
+            //if (filterByPanel && !panelTargets.contains(rootId)) continue;
             long totalNeeded = entry.getCountTotal();
             if (totalNeeded <= 0) continue;
             try {

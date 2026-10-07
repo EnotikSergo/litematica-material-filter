@@ -6,11 +6,11 @@
   "litematicafilter.screen.search.placeholder": "Search: oak, redst etc.",
 
   "litematicafilter.screen.button.apply_hud": "Apply to HUD",
-  "litematicafilter.screen.button.apply_render": "Apply Render",
+  "litematicafilter.screen.button.apply_render": "Apply to Placement",
   "litematicafilter.screen.button.clear": "✕ Clear Filter",
   "litematicafilter.screen.button.close": "Close",
-  "litematicafilter.screen.button.filter.on": "§aRender Filter: ON",
-  "litematicafilter.screen.button.filter.off": "§cRender Filter: OFF",
+  "litematicafilter.screen.button.filter.on": "§aPlacemets Filter: ON",
+  "litematicafilter.screen.button.filter.off": "§cPlacements Filter: OFF",
   "litematicafilter.screen.button.mode": "Mode: §e%s",
   "litematicafilter.screen.button.entities.on": "§aEntities: ON",
   "litematicafilter.screen.button.entities.off": "§cEntities: OFF",
@@ -32,7 +32,7 @@
   "litematicafilter.screen.raw_hud.title": " Raw Material List",
 
   "litematicafilter.screen.counter": "Shown: %1$s / %2$s",
-  "litematicafilter.screen.hint.controls": "LMB = For Filter Materials  |  RMB = For Filter Render",
+  "litematicafilter.screen.hint.controls": "LMB = For Filter Materials  |  RMB = For Filter Placement",
 
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Filtering materials in the Info HUD by search query and selecting from the list",

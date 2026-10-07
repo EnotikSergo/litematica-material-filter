@@ -6,11 +6,11 @@
   "litematicafilter.screen.search.placeholder": "Поиск: мангр, oak, редст и т.д...",
 
   "litematicafilter.screen.button.apply_hud": "Применить к HUD",
-  "litematicafilter.screen.button.apply_render": "Применить к Рендеру",
+  "litematicafilter.screen.button.apply_render": "Применить к Голограмме",
   "litematicafilter.screen.button.clear": "✕ Сбросить фильтр",
   "litematicafilter.screen.button.close": "Закрыть",
-  "litematicafilter.screen.button.filter.on": "§aФильтр рендера: ON",
-  "litematicafilter.screen.button.filter.off": "§cФильтр рендера: OFF",
+  "litematicafilter.screen.button.filter.on": "§aФильтр голограммы: ON",
+  "litematicafilter.screen.button.filter.off": "§cФильтр голограммы: OFF",
   "litematicafilter.screen.button.mode": "Режим: §e%s",
   "litematicafilter.screen.button.entities.on": "§aСущности: ON",
   "litematicafilter.screen.button.entities.off": "§cСущности: OFF",
@@ -32,7 +32,7 @@
   "litematicafilter.screen.raw_hud.title": " Список исходных материалов",
 
   "litematicafilter.screen.counter": "Показано: %1$s / %2$s",
-  "litematicafilter.screen.hint.controls": "ЛКМ = Выбрать для Фильтра материалов  |  ПКМ = Выбрать для Фильтра Рендера",
+  "litematicafilter.screen.hint.controls": "ЛКМ = Выбрать для Фильтра материалов  |  ПКМ = Выбрать для Фильтра Голограммы",
 
   "modmenu.nameTranslation.litematicafilter": "Litematica Material Filter",
   "modmenu.summaryTranslation.litematicafilter": "Фильтрация материалов в информационной панеле по поиску и выбору из списка",

@@ -37,11 +37,11 @@ public class FilterConfig {
     }
 
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; save(); }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; save(); RawHudRenderer.invalidateCache(); MaterialHudRenderer.invalidateCache();}
     public void toggleEnabled() { setEnabled(!this.enabled); }
 
     public FilterMode getMode() { return mode; }
-    public void setMode(FilterMode mode) { this.mode = mode; save(); }
+    public void setMode(FilterMode mode) { this.mode = mode; save(); RawHudRenderer.invalidateCache(); MaterialHudRenderer.invalidateCache();}
 
     public boolean isShowEntities() { return showEntities; }
     public void toggleShowEntities() { setShowEntities(!this.showEntities); }
@@ -97,8 +97,12 @@ public class FilterConfig {
     }
 
     public boolean shouldShowInMaterial(String blockId) {
-        if (materialTargets.isEmpty()) return true;
-        return materialTargets.contains(blockId.toLowerCase().trim());
+        if (materialTargets.isEmpty()) {
+            return mode != FilterMode.WHITELIST;
+        }
+
+        boolean contains = materialTargets.contains(blockId.toLowerCase().trim());
+        return (mode == FilterMode.WHITELIST) == contains;
     }
 
     public void load() {
