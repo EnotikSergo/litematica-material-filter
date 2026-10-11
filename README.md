@@ -2,23 +2,28 @@
 
 Addon for **Litematica**
 
-Allows filtering the material list by query and displaying only the necessary blocks in the **Info HUD** or in the Schematic Render in the world - without manually clicking "Ignore" on every extra material.
+Allows filtering the material list by query and displaying only the necessary blocks in the **Info HUD** or in the Schematic Placement in the world - without manually clicking "Ignore" on every extra material.
 
 ---
 
-<img width="957" height="1011" alt="image" src="https://github.com/user-attachments/assets/856ccd69-b1eb-4fbc-ad17-3283189f4fbb" />
+<img width="946" height="1008" alt="image" src="https://github.com/user-attachments/assets/191eeb63-783f-45aa-a31c-99cf372e4ce7" />
 
 ## Usage
 
-1. Load the schematic in Litematica, then select **`Material List`**, where you will find the **`Open Filter`** button, or simply press the **`N`** key by default.
+1. Load the schematic in Litematica, then select **`Material List`**, where you will find the **`Open Filter`** button, or simply press the **`N`** key by default. The last used placement is loaded automatically.
 2. The filter screen will appear:
-   - Enter a query, for example, `oak` — the list will immediately show only blocks with "oak" in their name. You can apply the entire list to the filter at once by clicking **`Apply to HUD`** or **`Apply to Render`**.
-   - You can also simply click to select what you need (**`LMB`** selects the filter for the Material List, **`RMB`** selects the filter for rendering blocks in the world on the schematic).
-   - **`Render Filter`** toggles the use of the filter for filtering schematic render blocks in the world.
-   - **`Render Mode`** can work as either a whitelist or a blacklist.
-   - **`Entities`** toggles the display of entities and fluid animations on the schematic.
-     The screenshot shows the filter whitelist enabled for the redstone block.
-     <img width="820" height="427" alt="image" src="https://github.com/user-attachments/assets/0225f036-934a-441b-84cc-c9d4f368174c" />
+    - Enter a query, for example, `oak` — the list will immediately show only blocks with "oak" in their name. You can apply the entire list to the filter at once by clicking **`Apply to HUD`** or **`Apply to Placement`**.
+    - You can also simply click to select what you need (**`LMB`** selects the filter for the Material List, **`RMB`** selects the filter for placement blocks in the world).
+
+   <img width="950" height="176" alt="image" src="https://github.com/user-attachments/assets/77db8a12-9884-49ef-a175-11a3d1d5c5a3" />
+
+    - **`Gren`** — hud filter; **`Blue`** — placemet filter; **`Yellow`** — both.
+
+    - **`Placement Filter: ON/OFF`** toggles the use of the filter for filtering schematic blocks in the placement.
+    - **`Mode: White/Black list`** can work as either a whitelist or a blacklist, placement and material huds.
+    - **`Entities`** toggles the display of entities and fluid animations on the schematic.
+      The screenshot shows the filter whitelist enabled for the redstone block.
+      <img width="820" height="427" alt="image" src="https://github.com/user-attachments/assets/0225f036-934a-441b-84cc-c9d4f368174c" />
 
 3. **`Material HUD`** enables the hud with the Material List, while **`Raw HUD`** enables the hud with the Raw Material List that can be broken down into base crafting materials.
 
@@ -28,6 +33,6 @@ Allows filtering the material list by query and displaying only the necessary bl
 
 4. With **`Raw HUD`** enabled, pressing **`[+]`** breaks down the given material into its components. You can either fully expand all materials or collapse them.
 
-<img width="951" height="1012" alt="image" src="https://github.com/user-attachments/assets/81187e81-a5ca-4d5b-a65d-3ac9675fa998" />
+<img width="945" height="1003" alt="image" src="https://github.com/user-attachments/assets/e131083a-6e05-4729-8f7a-0fd6678ce137" />
 
 5. To remove the filter, press **`✕ Clear Filter`**.

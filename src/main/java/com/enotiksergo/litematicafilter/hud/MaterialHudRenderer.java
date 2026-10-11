@@ -110,8 +110,6 @@ public class MaterialHudRenderer {
             return;
         }
         try {
-            Set<String> materialTargets = config.getMaterialTargets();
-            boolean filterByMaterial = materialTargets != null && !materialTargets.isEmpty();
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
@@ -124,7 +122,7 @@ public class MaterialHudRenderer {
                 ItemStack stack = entry.getStack();
                 String blockId = CraftTreeAdapter.getItemId(stack).toLowerCase().trim();
                 if (blockId.isEmpty()) continue;
-                if (filterByMaterial && !materialTargets.contains(blockId)) continue;
+                if (!config.shouldShowInMaterial(blockId)) continue;
 
                 long total = 0;
                 try { total = entry.getCountTotal(); } catch (Exception ignored) {}

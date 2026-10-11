@@ -119,7 +119,7 @@ public class RawHudRenderer {
             return;
         }
         try {
-            TreeNode tree = CraftTreeAdapter.buildTree(matList, config.getMaterialTargets());
+            TreeNode tree = CraftTreeAdapter.buildTree(matList, null);
             Set<String> priorityIds = new HashSet<>();
             priorityIds.addAll(config.getRenderTargets());
             priorityIds.addAll(config.getMaterialTargets());
@@ -128,7 +128,6 @@ public class RawHudRenderer {
             for (MatRow row : allRows) {
                 String idLower = row.itemId.toLowerCase().trim();
                 if (row.missing <= 0 && !row.isExpandedChild) {
-                    hiddenItems.add(idLower);
                     continue;
                 }
                 if (hiddenItems.contains(idLower) && !row.isExpandedChild) {
